@@ -41,6 +41,7 @@ function Signup() {
                 error.response?.data?.message ||
                 "Signup Failed"
             );
+            setLoading(false);
         }
     };
 

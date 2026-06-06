@@ -21,7 +21,7 @@ function VerifyOtp() {
 
             alert("Email Verified");
 
-            navigate("/");
+            navigate("/feed");
         } catch (error) {
             alert(
                 error.response?.data?.message
