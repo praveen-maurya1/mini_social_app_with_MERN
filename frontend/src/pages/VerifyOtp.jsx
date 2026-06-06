@@ -4,7 +4,7 @@ import API from "../services/api";
 
 function VerifyOtp() {
     const [otp, setOtp] = useState("");
-
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -14,6 +14,7 @@ function VerifyOtp() {
         e.preventDefault();
 
         try {
+            setLoading(true);
             await API.post("/auth/verify-email", {
                 email,
                 otp,
@@ -21,11 +22,12 @@ function VerifyOtp() {
 
             alert("Email Verified");
 
-            navigate("/feed");
+            navigate("/");
         } catch (error) {
             alert(
                 error.response?.data?.message
             );
+            setLoading(false);
         }
     };
 
@@ -58,8 +60,11 @@ function VerifyOtp() {
                     <button
                         className="btn btn-primary w-100"
                         type="submit"
+                        disabled={loading}
                     >
-                        Verify
+                        {loading
+                            ? "Verifying..."
+                            : "Verify"}
                     </button>
                 </form>
             </div>

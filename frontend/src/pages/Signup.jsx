@@ -26,7 +26,6 @@ function Signup() {
         try {
             setLoading(true);
             const res = await API.post("/auth/register", formData);
-            setLoading(false);
 
             alert(res.data.message);
 
