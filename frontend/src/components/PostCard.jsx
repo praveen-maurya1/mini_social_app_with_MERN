@@ -85,6 +85,7 @@ function PostCard({ post, fetchPosts }) {
                 />
 
                 <button
+                disabled={!comment}
                     className="btn btn-primary"
                     onClick={handleComment}
                 >

@@ -3,6 +3,12 @@ import postModel from "../models/post.model.js";
 export async function createPost(req, res) {
     const { text, image } = req.body;
 
+    if (!text?.trim() && !image) {
+        return res.status(400).json({
+            message: "Post must contain text or image"
+        });
+    }
+
     const post = await postModel.create({
         userId: req.user._id,
         username: req.user.username,

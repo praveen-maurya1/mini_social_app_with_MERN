@@ -18,15 +18,19 @@ function Signup() {
         });
     };
 
+    const [loading, setLoading] = useState(false);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         try {
+            setLoading(true);
             const res = await API.post("/auth/register", formData);
+            setLoading(false);
 
             alert(res.data.message);
 
-            // navigate("/");
+
             navigate("/verify-otp", {
                 state: {
                     email: formData.email,
@@ -73,8 +77,12 @@ function Signup() {
                     <button
                         type="submit"
                         className="btn btn-primary w-100"
+                        disabled={loading}
                     >
-                        Signup
+                        {loading
+                            ? "Creating account..."
+                            : "Signup"}
+
                     </button>
                 </form>
 

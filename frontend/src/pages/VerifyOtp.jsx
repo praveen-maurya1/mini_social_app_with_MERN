@@ -48,7 +48,7 @@ function VerifyOtp() {
                         type="text"
                         maxLength={6}
                         className="form-control mb-3"
-                        placeholder="Enter 4 digit OTP"
+                        placeholder="Enter 6 digit OTP"
                         value={otp}
                         onChange={(e) =>
                             setOtp(e.target.value)

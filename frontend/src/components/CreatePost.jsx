@@ -44,7 +44,7 @@ function CreatePost({ fetchPosts }) {
                 }
             />
 
-            <button className="btn btn-primary" onClick={handleSubmit}>
+            <button disabled={!text?.trim() && !image} className="btn btn-primary" onClick={handleSubmit}>
                 Post
             </button>
 

@@ -22,11 +22,18 @@ function Feed() {
         fetchPosts();
     }, []);
 
-    const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
 
-        navigate("/");
+    const handleLogout = async () => {
+        try {
+            await API.get("/auth/logout");
+
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+
+            navigate("/");
+        } catch (error) {
+            console.log(error);
+        }
     };
 
     return (
