@@ -24,3 +24,6 @@ export const sendEmail = async (to, subject, text, html) => {
     console.log("Email sent:", info.messageId);
 };
 
+console.log("SMTP_HOST:", config.SMTP_HOST);
+console.log("SMTP_PORT:", config.SMTP_PORT);
+console.log("SMTP_USER:", config.SMTP_USER);
