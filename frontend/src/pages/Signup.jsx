@@ -57,6 +57,8 @@ function Signup() {
                         placeholder="Username"
                         className="form-control mb-3"
                         onChange={handleChange}
+                        maxLength={30}
+                        required
                     />
 
                     <input
@@ -65,6 +67,7 @@ function Signup() {
                         placeholder="Email"
                         className="form-control mb-3"
                         onChange={handleChange}
+                        required
                     />
 
                     <input
@@ -73,6 +76,9 @@ function Signup() {
                         placeholder="Password"
                         className="form-control mb-3"
                         onChange={handleChange}
+                        minLength={7}
+                        maxLength={30}
+                        required
                     />
 
                     <button
