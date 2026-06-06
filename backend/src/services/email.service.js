@@ -44,16 +44,28 @@
 import nodemailer from "nodemailer";
 import config from "../config/config.js";
 
+// const transporter = nodemailer.createTransport({
+//     host: config.SMTP_HOST,
+//     port: 587,
+//     secure: false,
+//     auth: {
+//         user: config.SMTP_USER,
+//         pass: config.SMTP_PASS,
+//     },
+// });
+
+
+
 const transporter = nodemailer.createTransport({
     host: config.SMTP_HOST,
-    port: 587,
+    port: 2525,
     secure: false,
     auth: {
         user: config.SMTP_USER,
-        pass: config.SMTP_PASS,
+        pass: config.SMTP_PASS
     },
+    connectionTimeout: 15000,
 });
-
 // export const sendEmail = async (to, subject, text, html) => {
 //     const info = await transporter.sendMail({
 //         from: `Mini Social App <${config.SMTP_USER}>`,
