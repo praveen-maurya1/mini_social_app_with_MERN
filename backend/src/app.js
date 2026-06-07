@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import authMiddleware from './middleware/auth.middleware.js';
 import postRouter from './routes/post.routes.js';
 import cors from 'cors';
+import dotenv from 'dotenv';
 
 const app = express();
 

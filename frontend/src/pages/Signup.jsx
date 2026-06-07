@@ -28,7 +28,7 @@ function Signup() {
             const res = await API.post("/auth/register", formData);
 
             alert(res.data.message);
-
+            sessionStorage.setItem("otpEmail", formData.email);
 
             navigate("/verify-otp", {
                 state: {
@@ -47,7 +47,13 @@ function Signup() {
     return (
         <div className="container mt-5">
             <div className="card p-4 mx-auto" style={{ maxWidth: "400px" }}>
-                <h2 className="mb-4">Signup</h2>
+                <div className="d-flex gap-2 mb-3 align-items-center justify-content-center">
+                    <div className="overflow-hidden rounded-circle" style={{ width: "63px", height: "63px" }}><img src="/favicon.ico" alt="Logo" /></div>
+                    <h2 className="text-center mb-2">
+                        MySocialMedia
+                    </h2>
+                </div>
+                <h2 className="text-center mb-4">Signup</h2>
 
                 <form onSubmit={handleSubmit}>
                     <input

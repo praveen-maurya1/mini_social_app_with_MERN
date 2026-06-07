@@ -11,11 +11,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/verify-otp" element={
-          <ProtectedRoute>
-            <VerifyOtp />
-          </ProtectedRoute>
-        } />
+        <Route path="/verify-otp" element={<VerifyOtp />} />
         <Route path="/feed" element={
           <ProtectedRoute>
             <Feed />

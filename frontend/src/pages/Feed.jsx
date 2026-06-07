@@ -39,7 +39,12 @@ function Feed() {
     return (
         <div className="container mt-4">
             <div className="d-flex justify-content-between align-items-center mb-4">
-                <h2>Social Feed</h2>
+                <div className="d-flex gap-2 mb-3 align-items-center justify-content-center">
+                    <div className="overflow-hidden rounded-circle" style={{ width: "63px", height: "63px" }}><img src="/favicon.ico" alt="Logo" /></div>
+                    <h2 className="text-center mb-2">
+                        MySocialMedia
+                    </h2>
+                </div>
 
                 <button
                     className="btn btn-danger"

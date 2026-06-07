@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Navigate } from "react-router-dom";
 import API from "../services/api";
 
 function VerifyOtp() {
@@ -8,8 +8,13 @@ function VerifyOtp() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const email = location.state?.email;
+    const email =
+        location.state?.email ||
+        sessionStorage.getItem("otpEmail");
 
+    if (!email) {
+        return <Navigate to="/signup" replace />;
+    }
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -19,6 +24,8 @@ function VerifyOtp() {
                 email,
                 otp,
             });
+
+            sessionStorage.removeItem("otpEmail");
 
             alert("Email Verified");
 

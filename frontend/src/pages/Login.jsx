@@ -57,9 +57,17 @@ function Login() {
                 className="card shadow p-4 mx-auto mt-5"
                 style={{ maxWidth: "450px" }}
             >
-                <h2 className="text-center mb-4">
-                    Login
-                </h2>
+                <div>
+                    <div className="d-flex gap-2 mb-3 align-items-center justify-content-center">
+                        <div className="overflow-hidden rounded-circle" style={{ width: "63px", height: "63px" }}><img src="/favicon.ico" alt="Logo" /></div>
+                        <h2 className="text-center mb-2">
+                            MySocialMedia
+                        </h2>
+                    </div>
+                    <h3 className="text-center mb-4">
+                        Login
+                    </h3>
+                </div>
 
                 <form onSubmit={handleSubmit}>
                     <div className="mb-3">
