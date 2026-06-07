@@ -1,6 +1,18 @@
-# Mini Social App (MERN Stack)
+# Mini Social Media Application (MySocialMedia)
 
-A full-stack social media application built using the MERN stack. Users can register, verify their email through OTP, log in securely, create posts, like posts, and comment on posts.
+A full-stack social media application built using the MERN stack. Users can create accounts, verify their email using OTP, create posts, like posts, and interact through a public social feed.
+
+## Live Demo
+
+### Frontend
+
+https://mysocialmedia-alpha.vercel.app
+
+### Backend API
+
+https://socialmedia-mkqg.onrender.com
+
+---
 
 ## Features
 
@@ -8,59 +20,68 @@ A full-stack social media application built using the MERN stack. Users can regi
 
 * User Registration
 * Email OTP Verification
-* JWT Authentication
 * User Login
+* JWT Authentication
+* Refresh Token Authentication
+* Session Management
+* Protected Routes
 * Logout
+* Logout From All Devices
 
 ### Social Features
 
 * Create Posts
-* View Feed
-* Like / Unlike Posts
-* Add Comments
-* View Likes & Comments Count
+* Public Feed
+* Like Posts
+* View Like Counts
+* View Comment Counts
+* Responsive User Interface
+
+### Security Features
+
+* Password Hashing
+* JWT Access Tokens
+* Refresh Tokens stored in HTTP-only Cookies
+* Email Verification before Login
+* Session Revocation
+
+---
 
 ## Tech Stack
 
 ### Frontend
 
 * React.js
+* Vite
 * React Router DOM
 * Axios
 * Bootstrap
-* Vite
+* React Bootstrap
 
 ### Backend
 
 * Node.js
 * Express.js
-* JWT
-* Nodemailer
-
-### Database
-
 * MongoDB Atlas
 * Mongoose
+* JWT
+* Nodemailer
+* Brevo SMTP
+* Cookie Parser
+* CORS
+
+### Deployment
+
+* Frontend: Vercel
+* Backend: Render
+* Database: MongoDB Atlas
+
+---
 
 ## Project Structure
 
 ```text
-mini_social_app_with_MERN
-│
-├── backend
-│   ├── src
-│   │   ├── config
-│   │   ├── controllers
-│   │   ├── middleware
-│   │   ├── models
-│   │   ├── routes
-│   │   ├── services
-│   │   ├── utils
-│   │   └── app.js
-│   │
-│   ├── server.js
-│   ├── .env.example
-│   └── package.json
+Mini Social Media Application
 │
 ├── frontend
 │   ├── public
@@ -70,16 +91,55 @@ mini_social_app_with_MERN
 │   │   ├── pages
 │   │   ├── services
 │   │   ├── App.jsx
-│   │   ├── App.css
-│   │   ├── index.css
 │   │   └── main.jsx
-│   │
-│   ├── index.html
-│   ├── vite.config.js
-│   └── package.json
+│   └── vercel.json
 │
-└── README.md
+└── backend
+    ├── src
+    │   ├── config
+    │   ├── controllers
+    │   ├── middleware
+    │   ├── models
+    │   ├── routes
+    │   ├── services
+    │   └── utils
+    ├── server.js
+    └── package.json
 ```
+
+---
+
+## Environment Variables
+
+### Backend (.env)
+
+```env
+MONGO_URI=
+
+JWT_SECRET=
+
+PORT=
+
+SMTP_HOST=
+
+SMTP_PORT=
+
+SENDER_EMAIL=
+
+SMTP_PASS=
+
+SMTP_USER=
+
+CLIENT_URL=
+```
+
+### Frontend (.env)
+
+```env
+VITE_API_URL=
+```
+
+---
 
 ## Installation
 
@@ -95,17 +155,55 @@ cd mini_social_app_with_MERN
 
 ```bash
 cd backend
+
 npm install
-npm run dev
+
+npm start
+```
+
+Backend runs on:
+
+```text
+http://localhost:3000
 ```
 
 ### Frontend Setup
 
 ```bash
 cd frontend
+
 npm install
+
 npm run dev
 ```
+
+Frontend runs on:
+
+```text
+http://localhost:5173
+```
+
+---
+
+## Authentication Flow
+
+```text
+Signup
+   ↓
+Email OTP Verification
+   ↓
+Login
+   ↓
+Access Token + Refresh Token
+   ↓
+Create Posts
+   ↓
+Like Posts
+   ↓
+Logout
+```
+
+---
 
 ## API Endpoints
 
@@ -113,8 +211,12 @@ npm run dev
 
 ```http
 POST /api/auth/register
-POST /api/auth/verify-otp
+POST /api/auth/verify-email
 POST /api/auth/login
+GET  /api/auth/me
+POST /api/auth/refresh-token
+GET  /api/auth/logout
+GET  /api/auth/logout-all
 ```
 
 ### Posts
@@ -123,17 +225,35 @@ POST /api/auth/login
 GET    /api/posts
 POST   /api/posts
 PUT    /api/posts/:id/like
-POST   /api/posts/:id/comment
 ```
+
+---
 
 ## Deployment
 
-* Frontend: Vercel
-* Backend: Render
-* Database: MongoDB Atlas
+### Frontend
+
+Vercel
+
+### Backend
+
+Render
+
+### Database
+
+MongoDB Atlas
+
+### Email Service
+
+Brevo SMTP
+
+---
 
 ## Author
 
 Praveen Maurya
+
+GitHub:
+https://github.com/praveen-maurya1
 
 Linkedin: https://www.linkedin.com/in/praveen-maurya-722a393a1
