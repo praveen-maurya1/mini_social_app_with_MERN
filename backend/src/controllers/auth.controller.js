@@ -18,6 +18,10 @@ export async function register(req, res) {
         ]
     })
 
+    if (existingUser && !existingUser.verified) {
+        await userModel.findByIdAndDelete(existingUser._id);
+    }
+
     if (isaAlreadyRegistered) {
         return res.status(409).json({
             message: 'Username or email already exists'
@@ -198,7 +202,8 @@ export async function refreshToken(req, res) {
     res.cookie('refreshToken', newRefreshToken, {
         httpOnly: true,
         secure: true,
-        sameSite: 'strict',
+        // sameSite: 'strict',//for development only
+        sameSite: 'none',
         maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
