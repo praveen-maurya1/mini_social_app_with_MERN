@@ -18,14 +18,25 @@ export async function register(req, res) {
         ]
     })
 
-    if (existingUser && !existingUser.verified) {
-        await userModel.findByIdAndDelete(existingUser._id);
-    }
-
     if (isaAlreadyRegistered) {
-        return res.status(409).json({
-            message: 'Username or email already exists'
-        })
+
+        if (!isaAlreadyRegistered.verified) {
+
+            await otpModel.deleteMany({
+                user: isaAlreadyRegistered._id
+            });
+
+            await userModel.findByIdAndDelete(
+                isaAlreadyRegistered._id
+            );
+
+        } else {
+
+            return res.status(409).json({
+                message: 'Username or email already exists'
+            });
+
+        }
     }
 
 
