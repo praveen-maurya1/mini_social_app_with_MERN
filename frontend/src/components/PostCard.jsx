@@ -4,6 +4,7 @@ import API from "../services/api";
 function PostCard({ post, fetchPosts }) {
 
     const [comment, setComment] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const handleLike = async () => {
         try {
@@ -21,7 +22,7 @@ function PostCard({ post, fetchPosts }) {
         try {
 
             if (!comment.trim()) return;
-
+            setLoading(true);
             await API.post(
                 `/posts/${post._id}/comment`,
                 {
@@ -35,6 +36,8 @@ function PostCard({ post, fetchPosts }) {
 
         } catch (error) {
             console.log(error);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -85,11 +88,14 @@ function PostCard({ post, fetchPosts }) {
                 />
 
                 <button
-                disabled={!comment}
+                    disabled={!comment, loading}
                     className="btn btn-primary"
                     onClick={handleComment}
                 >
-                    Add
+                    {loading
+                        ? "Adding..."
+                        : "Add"}
+
                 </button>
 
             </div>

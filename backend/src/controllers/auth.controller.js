@@ -82,7 +82,7 @@ export async function login(req, res) {
 
     if (!user) {
         return res.status(401).json({
-            message: 'Invalid email or password'
+            message: 'User not found'
         });
     }
 
@@ -98,7 +98,7 @@ export async function login(req, res) {
 
     if (!isPasswordValid) {
         return res.status(401).json({
-            message: 'Invalid email or password'
+            message: 'Wrong password'
         });
     }
 
@@ -152,6 +152,18 @@ export async function login(req, res) {
 }
 
 export async function getMe(req, res) {
+    const token = req.headers.authorization?.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({
+            message: 'token not found'
+        });
+    }
+
+
+    const decoded = jwt.verify(token, config.JWT_SECRET);
+
+    const user = await userModel.findById(decoded.id);
 
     res.status(200).json({
         message: 'User fetched successfully',

@@ -4,9 +4,11 @@ import API from "../services/api";
 function CreatePost({ fetchPosts }) {
     const [text, setText] = useState("");
     const [image, setImage] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async () => {
         try {
+            setLoading(true)
             await API.post("/posts", {
                 text,
                 image,
@@ -19,12 +21,14 @@ function CreatePost({ fetchPosts }) {
 
         } catch (error) {
             console.log(error);
+        } finally {
+            setLoading(false)
         }
     };
 
     return (
         <div className="card p-3 mb-4">
-
+            <h4 className="mb-3 ">Let's just do some posts </h4>
             <textarea
                 className="form-control mb-3"
                 placeholder="What's on your mind?"
@@ -44,8 +48,10 @@ function CreatePost({ fetchPosts }) {
                 }
             />
 
-            <button disabled={!text?.trim() && !image} className="btn btn-primary" onClick={handleSubmit}>
-                Post
+            <button disabled={!text?.trim() && !image, loading} className="btn btn-primary" onClick={handleSubmit}>
+                {loading
+                    ? "Posting..."
+                    : "Post"}
             </button>
 
         </div>
