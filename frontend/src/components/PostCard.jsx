@@ -1,20 +1,67 @@
 import { useState } from "react";
 import API from "../services/api";
 
-function PostCard({ post, fetchPosts }) {
+function PostCard({ post, fetchPosts, setPosts }) {
 
     const [comment, setComment] = useState("");
     const [loading, setLoading] = useState(false);
 
+    // const handleLike = async () => {
+    //     try {
+    //         await API.put(
+    //             `/posts/${post._id}/like`
+    //         );
+
+    //         fetchPosts();
+    //     } catch (error) {
+    //         console.log(error);
+    //     }
+    // };
+
     const handleLike = async () => {
+
+        const user = JSON.parse(
+            localStorage.getItem("user")
+        );
+
+        const userId = user?._id;
+
+        setPosts(prevPosts =>
+            prevPosts.map(p => {
+
+                if (p._id !== post._id)
+                    return p;
+
+                const alreadyLiked =
+                    p.likes.includes(userId);
+
+                return {
+                    ...p,
+                    likes: alreadyLiked
+                        ? p.likes.filter(
+                            id => id !== userId
+                        )
+                        : [
+                            ...p.likes,
+                            userId
+                        ]
+                };
+
+            })
+        );
+
         try {
+
             await API.put(
                 `/posts/${post._id}/like`
             );
 
-            fetchPosts();
         } catch (error) {
+
             console.log(error);
+
+            fetchPosts();
+
         }
     };
 

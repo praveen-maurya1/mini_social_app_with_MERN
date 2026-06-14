@@ -29,6 +29,7 @@ function Login() {
                 "/auth/login",
                 formData
             );
+            // console.log(response.data);
 
             localStorage.setItem(
                 "token",

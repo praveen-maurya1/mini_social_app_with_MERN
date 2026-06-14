@@ -93,6 +93,7 @@ function Feed() {
                     key={post._id}
                     post={post}
                     fetchPosts={fetchPosts}
+                    setPosts={setPosts}
                 />
             ))}
         </div>
