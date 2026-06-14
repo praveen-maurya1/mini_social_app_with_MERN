@@ -6,17 +6,6 @@ function PostCard({ post, fetchPosts, setPosts }) {
     const [comment, setComment] = useState("");
     const [loading, setLoading] = useState(false);
 
-    // const handleLike = async () => {
-    //     try {
-    //         await API.put(
-    //             `/posts/${post._id}/like`
-    //         );
-
-    //         fetchPosts();
-    //     } catch (error) {
-    //         console.log(error);
-    //     }
-    // };
 
     const handleLike = async () => {
 
@@ -66,25 +55,51 @@ function PostCard({ post, fetchPosts, setPosts }) {
     };
 
     const handleComment = async () => {
+
+        if (!comment.trim()) return;
+
+        const currentUser = JSON.parse(
+            localStorage.getItem("user")
+        );
+
+        const newComment = {
+            username: currentUser.username,
+            text: comment
+        };
+
+        setPosts(prevPosts =>
+            prevPosts.map(p =>
+                p._id === post._id
+                    ? {
+                        ...p,
+                        comments: [
+                            ...p.comments,
+                            newComment
+                        ]
+                    }
+                    : p
+            )
+        );
+
+        const commentText = comment;
+
+        setComment("");
+
         try {
 
-            if (!comment.trim()) return;
-            setLoading(true);
             await API.post(
                 `/posts/${post._id}/comment`,
                 {
-                    text: comment
+                    text: commentText
                 }
             );
 
-            setComment("");
+        } catch (error) {
+
+            console.log(error);
 
             fetchPosts();
 
-        } catch (error) {
-            console.log(error);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -135,7 +150,7 @@ function PostCard({ post, fetchPosts, setPosts }) {
                 />
 
                 <button
-                    disabled={!comment, loading}
+                    disabled={!comment.trim() || loading}
                     className="btn btn-primary"
                     onClick={handleComment}
                 >
