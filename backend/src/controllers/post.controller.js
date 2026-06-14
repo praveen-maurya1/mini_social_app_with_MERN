@@ -24,13 +24,33 @@ export async function createPost(req, res) {
 
 export async function getAllPosts(req, res) {
     try {
-        const posts = await postModel.find().sort({ createdAt: -1 });
 
-        res.status(200).json(posts);
+        const page =
+            Number(req.query.page) || 1;
+
+        const limit = 10;
+
+        const posts = await postModel
+            .find()
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        const totalPosts =
+            await postModel.countDocuments();
+
+        res.status(200).json({
+            posts,
+            hasMore:
+                page * limit < totalPosts
+        });
+
     } catch (error) {
+
         res.status(500).json({
             message: error.message
         });
+
     }
 }
 

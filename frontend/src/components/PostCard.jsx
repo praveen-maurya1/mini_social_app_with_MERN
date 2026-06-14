@@ -5,7 +5,7 @@ function PostCard({ post, fetchPosts, setPosts }) {
 
     const [comment, setComment] = useState("");
     const [loading, setLoading] = useState(false);
-
+    const [visibleComments, setVisibleComments] = useState(1);
 
     const handleLike = async () => {
 
@@ -54,6 +54,7 @@ function PostCard({ post, fetchPosts, setPosts }) {
         }
     };
 
+
     const handleComment = async () => {
 
         if (!comment.trim()) return;
@@ -84,6 +85,10 @@ function PostCard({ post, fetchPosts, setPosts }) {
         const commentText = comment;
 
         setComment("");
+
+        setVisibleComments(prev =>
+            Math.max(prev, 10)
+        );
 
         try {
 
@@ -162,30 +167,42 @@ function PostCard({ post, fetchPosts, setPosts }) {
 
             </div>
 
-            {post.comments.length > 0 && (
-                <div>
 
-                    <h6>Comments</h6>
+            {post.comments
+                .slice(0, visibleComments)
+                .map((comment, index) => (
+                    <div
+                        key={index}
+                        className="border-top pt-2 mt-2"
+                    >
+                        <strong>
+                            {comment.username}
+                        </strong>
 
-                    {post.comments.map(
-                        (comment, index) => (
-                            <div
-                                key={index}
-                                className="border-top pt-2 mt-2"
-                            >
-                                <strong>
-                                    {comment.username}
-                                </strong>
+                        <p className="mb-1">
+                            {comment.text}
+                        </p>
 
-                                <p className="mb-1">
-                                    {comment.text}
-                                </p>
-                            </div>
-                        )
-                    )}
+                        {post.comments.length >
+                            visibleComments && (
+                                <button
+                                    className="btn btn-link p-0 mt-2"
+                                    onClick={() =>
+                                        setVisibleComments(
+                                            prev => prev + 10
+                                        )
+                                    }
+                                >
+                                    View more comments
+                                </button>
+                            )
+                        }
 
-                </div>
-            )}
+                    </div>
+                ))
+            }
+
+
 
         </div>
     );

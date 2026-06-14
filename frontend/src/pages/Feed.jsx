@@ -9,14 +9,51 @@ function Feed() {
     const [user, setUser] = useState([]);
     const [userlogout, setUserlogout] = useState(false);
     const navigate = useNavigate();
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [loadingPosts, setLoadingPosts] = useState(false);
 
-    const fetchPosts = async () => {
+    const fetchPosts = async (
+        pageNumber = 1
+    ) => {
+
+        if (loadingPosts) return;
+
         try {
-            const response = await API.get("/posts");
 
-            setPosts(response.data);
+            setLoadingPosts(true);
+
+            const response = await API.get(
+                `/posts?page=${pageNumber}`
+            );
+
+            if (pageNumber === 1) {
+
+                setPosts(
+                    response.data.posts
+                );
+
+            } else {
+
+                setPosts(prev => [
+                    ...prev,
+                    ...response.data.posts
+                ]);
+
+            }
+
+            setHasMore(
+                response.data.hasMore
+            );
+
         } catch (error) {
+
             console.log(error);
+
+        } finally {
+
+            setLoadingPosts(false);
+
         }
     };
 
@@ -41,8 +78,54 @@ function Feed() {
 
         fetchMe();
 
-        fetchPosts();
+        fetchPosts(1);
+
     }, []);
+    useEffect(() => {
+
+        const handleScroll = () => {
+
+            const bottom =
+                window.innerHeight +
+                window.scrollY >=
+                document.documentElement.scrollHeight - 200;
+
+            if (
+                bottom &&
+                hasMore &&
+                !loadingPosts
+            ) {
+
+                setPage(prev => prev + 1);
+
+            }
+            // console.log(
+            //     "Page Changed:",
+            //     page
+            // );
+        };
+
+        window.addEventListener(
+            "scroll",
+            handleScroll
+        );
+
+        return () =>
+            window.removeEventListener(
+                "scroll",
+                handleScroll
+            );
+
+    }, [hasMore, loadingPosts]);
+    useEffect(() => {
+
+        if (page > 1) {
+
+            fetchPosts(page);
+
+        }
+
+    }, [page]);
 
 
     const handleLogout = async () => {
@@ -96,6 +179,16 @@ function Feed() {
                     setPosts={setPosts}
                 />
             ))}
+            {loadingPosts && (
+                <div className="text-center my-3">
+                    Loading posts...
+                </div>
+            )}
+            {!hasMore && posts.length > 0 && (
+                <div className="text-center my-3">
+                    No More Posts !
+                </div>
+            )}
         </div>
     );
 }
