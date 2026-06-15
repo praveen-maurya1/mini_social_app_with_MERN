@@ -10,6 +10,7 @@ function Signup() {
         email: "",
         password: "",
     });
+    
 
     const handleChange = (e) => {
         setFormData({
