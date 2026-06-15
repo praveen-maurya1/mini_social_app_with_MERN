@@ -99,10 +99,6 @@ function Feed() {
                 setPage(prev => prev + 1);
 
             }
-            // console.log(
-            //     "Page Changed:",
-            //     page
-            // );
         };
 
         window.addEventListener(
@@ -130,6 +126,7 @@ function Feed() {
 
     const handleLogout = async () => {
         try {
+            setUserlogout(true);
             await API.get("/auth/logout");
 
             localStorage.clear();
