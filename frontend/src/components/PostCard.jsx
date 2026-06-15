@@ -1,44 +1,91 @@
 import { useState } from "react";
 import API from "../services/api";
 
-function PostCard({ post, fetchPosts, setPosts }) {
+function PostCard({
+    post,
+    fetchPosts,
+    setPosts
+}) {
 
-    const [comment, setComment] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [visibleComments, setVisibleComments] = useState(1);
-    const [liking, setLiking] = useState(false);
+    const [comment, setComment] =
+        useState("");
+
+    const [loading, setLoading] =
+        useState(false);
+
+    const [visibleComments,
+        setVisibleComments] =
+        useState(1);
+
+    const [liking, setLiking] =
+        useState(false);
+
+    const currentUser = JSON.parse(
+        localStorage.getItem("user")
+    );
+
+    const currentUserId =
+        currentUser?._id;
+
+    const liked =
+        currentUser &&
+        post.likes.some(
+            like =>
+                like.userId?.toString()
+                === currentUserId
+        );
+
+
+
+    // LIKE
 
     const handleLike = async () => {
+
         if (liking) return;
-        setLiking(true);
+
         const user = JSON.parse(
             localStorage.getItem("user")
         );
+
+        if (!user) return;
+
+        setLiking(true);
 
         const userId = user._id;
 
         setPosts(prevPosts =>
             prevPosts.map(p => {
 
-                if (p._id !== post._id)
-                    return p;
+                if (
+                    p._id !== post._id
+                ) return p;
 
                 const alreadyLiked =
                     p.likes.some(
                         like =>
-                            like.userId?.toString() ===
-                            userId
+                            like.userId
+                                ?.toString()
+                            === userId
                     );
 
                 return {
-                    ...p, likes: alreadyLiked ? p.likes.filter(like => like.userId?.toString() !== userId) : [...p.likes, {
-                        userId,
-                        username:
-                            user.username
+                    ...p,
+                    likes: alreadyLiked
+                        ? p.likes.filter(
+                            like =>
+                                like.userId
+                                    ?.toString()
+                                !== userId
+                        )
+                        : [...p.likes,
+                        {
+                            userId,
+                            username:
+                                user.username
 
-                    }
+                        }
 
-                    ]
+                        ]
 
                 };
 
@@ -65,77 +112,108 @@ function PostCard({ post, fetchPosts, setPosts }) {
     };
 
 
-    const handleComment = async () => {
 
-        if (!comment.trim()) return;
+    // COMMENT
 
-        const currentUser = JSON.parse(
-            localStorage.getItem("user")
-        );
+    const handleComment =
+        async () => {
 
-        const newComment = {
-            username: currentUser.username,
-            text: comment
-        };
+            if (
+                !comment.trim()
+            ) return;
 
-        setPosts(prevPosts =>
-            prevPosts.map(p =>
-                p._id === post._id
-                    ? {
-                        ...p,
-                        comments: [
-                            ...p.comments,
-                            newComment
-                        ]
-                    }
-                    : p
-            )
-        );
+            const currentUser =
+                JSON.parse(
+                    localStorage.getItem(
+                        "user"
+                    )
+                );
 
-        const commentText = comment;
+            if (!currentUser)
+                return;
 
-        setComment("");
+            const newComment = {
 
-        setVisibleComments(prev =>
-            Math.max(prev, 10)
-        );
+                username:
+                    currentUser.username,
 
-        try {
+                text: comment
 
-            await API.post(
-                `/posts/${post._id}/comment`,
-                {
-                    text: commentText
-                }
+            };
+
+            setPosts(prevPosts =>
+
+                prevPosts.map(p =>
+
+                    p._id === post._id
+                        ? {
+                            ...p,
+                            comments: [
+                                ...p.comments,
+                                newComment
+                            ]
+                        }
+                        : p
+                )
             );
 
-        } catch (error) {
+            const commentText =
+                comment;
 
-            console.log(error);
+            setComment("");
 
-            fetchPosts();
+            setVisibleComments(
+                prev =>
+                    Math.max(
+                        prev,
+                        10
+                    )
+            );
 
-        }
-    };
-    const currentUser = JSON.parse(
-        localStorage.getItem("user")
-    );
+            try {
 
-    const liked = post.likes.some(
-        like =>
-            like.userId?.toString() ===
-            currentUser._id
-    );
+                setLoading(true);
+
+                await API.post(
+
+                    `/posts/${post._id}/comment`,
+
+                    {
+
+                        text:
+                            commentText
+
+                    }
+
+                );
+
+            } catch (error) {
+
+                console.log(error);
+
+                fetchPosts(1);
+
+            } finally {
+
+                setLoading(false);
+
+            }
+
+        };
+
+
 
     return (
+
         <div className="card mb-3 p-3 shadow-sm">
-
-            <h5>{post.username}</h5>
-
+            <h5>
+                {post.username}
+            </h5>
             {post.text && (
-                <p>{post.text}</p>
+                <p>
+                    {post.text}
+                </p>
             )}
-
             {post.image && (
                 <img
                     src={post.image}
@@ -143,48 +221,85 @@ function PostCard({ post, fetchPosts, setPosts }) {
                     className="img-fluid rounded mb-3"
                 />
             )}
-
-            <div className="d-flex gap-2 mb-3">
-
+            <div className="d-flex gap-2 mb-3"            >
                 <button
                     disabled={liking}
                     className={`btn btn-sm ${liked
                         ? "btn-danger"
                         : "btn-outline-danger"
                         }`}
-                    onClick={handleLike}
-                >
-                    {liked ? "❤️" : "🤍"}{" "}
+                    onClick={handleLike}>
+
+                    {liked
+                        ? "❤️"
+                        : "🤍"}
+
+                    {" "}
+
                     {post.likes.length}
+
                 </button>
 
-                <button
-                    className="btn btn-outline-secondary btn-sm"
-                >
-                    💬 {post.comments.length}
+
+
+                <button className="btn btn-outline-secondary btn-sm"                >
+                    💬
+
+                    {" "}
+
+                    {post.comments.length}
+
                 </button>
 
             </div>
 
-            <div className="d-flex gap-2 mb-3">
+
+
+            <div
+                className="d-flex gap-2 mb-3"
+            >
 
                 <input
+
                     type="text"
+
                     className="form-control"
+
                     placeholder="Write a comment..."
+
                     value={comment}
+
                     onChange={(e) =>
-                        setComment(e.target.value)
+
+                        setComment(
+                            e.target.value
+                        )
+
                     }
+
                 />
 
+
+
                 <button
-                    disabled={!comment.trim() || loading}
+
+                    disabled={
+                        !comment.trim()
+                        || loading
+                    }
+
                     className="btn btn-primary"
-                    onClick={handleComment}
+
+                    onClick={
+                        handleComment
+                    }
+
                 >
+
                     {loading
+
                         ? "Adding..."
+
                         : "Add"}
 
                 </button>
@@ -192,43 +307,79 @@ function PostCard({ post, fetchPosts, setPosts }) {
             </div>
 
 
+
             {post.comments
-                .slice(0, visibleComments)
-                .map((comment, index) => (
-                    <div
-                        key={index}
-                        className="border-top pt-2 mt-2"
-                    >
-                        <strong>
-                            {comment.username}
-                        </strong>
 
-                        <p className="mb-1">
-                            {comment.text}
-                        </p>
+                .slice(
+                    0,
+                    visibleComments
+                )
 
-                        {post.comments.length >
-                            visibleComments && (
-                                <button
-                                    className="btn btn-link p-0 mt-2"
-                                    onClick={() =>
-                                        setVisibleComments(
-                                            prev => prev + 10
-                                        )
-                                    }
-                                >
-                                    View more comments
-                                </button>
-                            )
-                        }
+                .map(
+                    (
+                        comment,
+                        index
+                    ) => (
 
-                    </div>
-                ))
-            }
+                        <div
 
+                            key={index}
 
+                            className="border-top pt-2 mt-2"
 
+                        >
+
+                            <strong>
+
+                                {
+                                    comment.username
+                                }
+
+                            </strong>
+
+                            <p
+                                className="mb-1"
+                            >
+
+                                {
+                                    comment.text
+                                }
+
+                            </p>
+
+                            {post.comments.length >
+
+                                visibleComments && (
+
+                                    <button
+
+                                        className="btn btn-link p-0 mt-2"
+
+                                        onClick={() =>
+
+                                            setVisibleComments(
+
+                                                prev =>
+
+                                                    prev + 10
+
+                                            )
+
+                                        }
+
+                                    >
+
+                                        View more comments
+
+                                    </button>
+
+                                )}
+                        </div>
+
+                    )
+                )}
         </div>
+
     );
 }
 

@@ -130,13 +130,13 @@ function Feed() {
 
     const handleLogout = async () => {
         try {
-            setUserlogout(true);
             await API.get("/auth/logout");
 
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
+            localStorage.clear();
 
-            navigate("/");
+            navigate("/", {
+                replace: true
+            });
         } catch (error) {
             console.log(error);
         } finally {
