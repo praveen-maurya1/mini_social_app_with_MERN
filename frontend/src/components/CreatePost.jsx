@@ -9,7 +9,6 @@ function CreatePost({ fetchPosts }) {
     const fileInputRef = useRef(null);
 
     const compressImage = async (file) => {
-
         // 800 KB se chhoti image ko compress mat karo
 
         if (file.size <= 800 * 1024) {
@@ -165,7 +164,6 @@ function CreatePost({ fetchPosts }) {
                     setText(e.target.value)
                 }
             />
-
             <input
                 ref={fileInputRef}
                 type="file"
@@ -186,9 +184,7 @@ function CreatePost({ fetchPosts }) {
                         alert(
                             "Maximum image size is 5 MB"
                         );
-
                         return;
-
                     }
 
                     setImage(file);
