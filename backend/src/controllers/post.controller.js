@@ -53,52 +53,84 @@ export async function getAllPosts(req, res) {
 
     }
 }
-
 export async function likePost(req, res) {
     try {
-        const post = await postModel.findById(req.params.id);
+
+        const post =
+            await postModel.findById(
+                req.params.id
+            );
 
         if (!post) {
-            return res.status(404).json({
-                message: "Post not found"
-            });
+
+            return res.status(404)
+                .json({
+                    message:
+                        "Post not found"
+                });
+
         }
 
-        const alreadyLiked = post.likes.find(
-            (like) => like.userId === req.user.id
-        );
+        const alreadyLiked =
+            post.likes.find(
+                like =>
+                    like.userId.toString()
+                    === req.user.id
+            );
 
         if (alreadyLiked) {
-            post.likes = post.likes.filter(
-                (like) => like.userId !== req.user.id
-            );
+
+            post.likes =
+                post.likes.filter(
+                    like =>
+                        like.userId.toString()
+                        !== req.user.id
+                );
 
             await post.save();
 
-            return res.status(200).json({
-                message: "Post unliked",
-                likes: post.likes.length
-            });
+            return res.status(200)
+                .json({
+                    message:
+                        "Post unliked",
+                    likes:
+                        post.likes.length
+                });
+
         }
 
         post.likes.push({
+
             userId: req.user.id,
-            username: req.user.username
+
+            username:
+                req.user.username
+
         });
 
         await post.save();
 
         res.status(200).json({
-            message: "Post liked",
-            likes: post.likes.length
+
+            message:
+                "Post liked",
+
+            likes:
+                post.likes.length
+
         });
 
     } catch (error) {
+
         res.status(500).json({
-            message: error.message
+
+            message:
+                error.message
+
         });
+
     }
-};
+}
 
 export async function addComment(req, res) {
     try {

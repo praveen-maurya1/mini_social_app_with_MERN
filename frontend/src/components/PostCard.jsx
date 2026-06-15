@@ -6,14 +6,16 @@ function PostCard({ post, fetchPosts, setPosts }) {
     const [comment, setComment] = useState("");
     const [loading, setLoading] = useState(false);
     const [visibleComments, setVisibleComments] = useState(1);
+    const [liking, setLiking] = useState(false);
 
     const handleLike = async () => {
-
+        if (liking) return;
+        setLiking(true);
         const user = JSON.parse(
             localStorage.getItem("user")
         );
 
-        const userId = user?._id;
+        const userId = user._id;
 
         setPosts(prevPosts =>
             prevPosts.map(p => {
@@ -22,18 +24,22 @@ function PostCard({ post, fetchPosts, setPosts }) {
                     return p;
 
                 const alreadyLiked =
-                    p.likes.includes(userId);
+                    p.likes.some(
+                        like =>
+                            like.userId?.toString() ===
+                            userId
+                    );
 
                 return {
-                    ...p,
-                    likes: alreadyLiked
-                        ? p.likes.filter(
-                            id => id !== userId
-                        )
-                        : [
-                            ...p.likes,
-                            userId
-                        ]
+                    ...p, likes: alreadyLiked ? p.likes.filter(like => like.userId?.toString() !== userId) : [...p.likes, {
+                        userId,
+                        username:
+                            user.username
+
+                    }
+
+                    ]
+
                 };
 
             })
@@ -49,7 +55,11 @@ function PostCard({ post, fetchPosts, setPosts }) {
 
             console.log(error);
 
-            fetchPosts();
+            fetchPosts(1);
+
+        } finally {
+
+            setLiking(false);
 
         }
     };
@@ -107,6 +117,15 @@ function PostCard({ post, fetchPosts, setPosts }) {
 
         }
     };
+    const currentUser = JSON.parse(
+        localStorage.getItem("user")
+    );
+
+    const liked = post.likes.some(
+        like =>
+            like.userId?.toString() ===
+            currentUser._id
+    );
 
     return (
         <div className="card mb-3 p-3 shadow-sm">
@@ -128,10 +147,15 @@ function PostCard({ post, fetchPosts, setPosts }) {
             <div className="d-flex gap-2 mb-3">
 
                 <button
-                    className="btn btn-outline-danger btn-sm"
+                    disabled={liking}
+                    className={`btn btn-sm ${liked
+                        ? "btn-danger"
+                        : "btn-outline-danger"
+                        }`}
                     onClick={handleLike}
                 >
-                    ❤️ {post.likes.length}
+                    {liked ? "❤️" : "🤍"}{" "}
+                    {post.likes.length}
                 </button>
 
                 <button
