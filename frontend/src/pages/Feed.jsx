@@ -154,6 +154,7 @@ function Feed() {
                 </div>
 
                 <button
+                    disabled={userlogout}
                     className="btn btn-danger"
                     onClick={handleLogout}
                 >
