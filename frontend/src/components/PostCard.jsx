@@ -204,22 +204,21 @@ function PostCard({
 
 
     return (
-
         <div className="card mb-3 p-3 shadow-sm">
-            <h5>
-                {post.username}
-            </h5>
+            <h5>{post.username}</h5>
             {post.text && (
                 <p>
                     {post.text}
                 </p>
             )}
             {post.image && (
-                <img
-                    src={post.image}
-                    alt="post"
-                    className="img-fluid rounded mb-3"
-                />
+                <div className="postImg">
+                    <img
+                        src={post.image}
+                        alt="post"
+                        className="img-fluid rounded mb-3"
+                    />
+                </div>
             )}
             <div className="d-flex gap-2 mb-3"            >
                 <button
@@ -261,12 +260,7 @@ function PostCard({
 
                 <input
 
-                    type="text"
-
-                    className="form-control"
-
-                    placeholder="Write a comment..."
-
+                    type="text" className="form-control" placeholder="Write a comment..." 
                     value={comment}
 
                     onChange={(e) =>
