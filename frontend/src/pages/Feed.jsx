@@ -1,199 +1,199 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import API from "../services/api";
-import CreatePost from "../components/CreatePost";
-import PostCard from "../components/PostCard";
+// import { useEffect, useState } from "react";
+// import { useNavigate } from "react-router-dom";
+// import API from "../services/api";
+// import CreatePost from "../components/CreatePost";
+// import PostCard from "../components/PostCard";
 
-function Feed() {
-    const [posts, setPosts] = useState([]);
-    const [user, setUser] = useState([]);
-    const [userlogout, setUserlogout] = useState(false);
-    const navigate = useNavigate();
-    const [page, setPage] = useState(1);
-    const [hasMore, setHasMore] = useState(true);
-    const [loadingPosts, setLoadingPosts] = useState(false);
+// function Feed() {
+//     const [posts, setPosts] = useState([]);
+//     const [user, setUser] = useState([]);
+//     const [userlogout, setUserlogout] = useState(false);
+//     const navigate = useNavigate();
+//     const [page, setPage] = useState(1);
+//     const [hasMore, setHasMore] = useState(true);
+//     const [loadingPosts, setLoadingPosts] = useState(false);
 
-    const fetchPosts = async (
-        pageNumber = 1
-    ) => {
+//     const fetchPosts = async (
+//         pageNumber = 1
+//     ) => {
 
-        if (loadingPosts) return;
+//         if (loadingPosts) return;
 
-        try {
+//         try {
 
-            setLoadingPosts(true);
+//             setLoadingPosts(true);
 
-            const response = await API.get(
-                `/posts?page=${pageNumber}`
-            );
+//             const response = await API.get(
+//                 `/posts?page=${pageNumber}`
+//             );
 
-            if (pageNumber === 1) {
+//             if (pageNumber === 1) {
 
-                setPosts(
-                    response.data.posts
-                );
+//                 setPosts(
+//                     response.data.posts
+//                 );
 
-            } else {
+//             } else {
 
-                setPosts(prev => [
-                    ...prev,
-                    ...response.data.posts
-                ]);
+//                 setPosts(prev => [
+//                     ...prev,
+//                     ...response.data.posts
+//                 ]);
 
-            }
+//             }
 
-            setHasMore(
-                response.data.hasMore
-            );
+//             setHasMore(
+//                 response.data.hasMore
+//             );
 
-        } catch (error) {
+//         } catch (error) {
 
-            console.log(error);
+//             console.log(error);
 
-        } finally {
+//         } finally {
 
-            setLoadingPosts(false);
+//             setLoadingPosts(false);
 
-        }
-    };
+//         }
+//     };
 
-    const fetchMe = async () => {
+//     const fetchMe = async () => {
 
-        try {
+//         try {
 
-            const res = await API.get(
-                "auth/get-me"
-            );
+//             const res = await API.get(
+//                 "auth/get-me"
+//             );
 
-            setUser(res.data.user);
+//             setUser(res.data.user);
 
-        } catch (error) {
+//         } catch (error) {
 
-            console.log(error);
+//             console.log(error);
 
-        }
+//         }
 
-    };
+//     };
     
-    useEffect(() => {
+//     useEffect(() => {
 
-        fetchMe();
+//         fetchMe();
 
-        fetchPosts(1);
+//         fetchPosts(1);
 
-    }, []);
+//     }, []);
 
-    useEffect(() => {
+//     useEffect(() => {
 
-        const handleScroll = () => {
+//         const handleScroll = () => {
 
-            const bottom =
-                window.innerHeight +
-                window.scrollY >=
-                document.documentElement.scrollHeight - 200;
+//             const bottom =
+//                 window.innerHeight +
+//                 window.scrollY >=
+//                 document.documentElement.scrollHeight - 200;
 
-            if (
-                bottom &&
-                hasMore &&
-                !loadingPosts
-            ) {
+//             if (
+//                 bottom &&
+//                 hasMore &&
+//                 !loadingPosts
+//             ) {
 
-                setPage(prev => prev + 1);
+//                 setPage(prev => prev + 1);
 
-            }
-        };
+//             }
+//         };
 
-        window.addEventListener(
-            "scroll",
-            handleScroll
-        );
+//         window.addEventListener(
+//             "scroll",
+//             handleScroll
+//         );
 
-        return () =>
-            window.removeEventListener(
-                "scroll",
-                handleScroll
-            );
+//         return () =>
+//             window.removeEventListener(
+//                 "scroll",
+//                 handleScroll
+//             );
 
-    }, [hasMore, loadingPosts]);
+//     }, [hasMore, loadingPosts]);
 
-    useEffect(() => {
+//     useEffect(() => {
 
-        if (page > 1) {
+//         if (page > 1) {
 
-            fetchPosts(page);
+//             fetchPosts(page);
 
-        }
+//         }
 
-    }, [page]);
+//     }, [page]);
 
 
-    const handleLogout = async () => {
-        try {
-            setUserlogout(true);
-            await API.get("/auth/logout");
+//     const handleLogout = async () => {
+//         try {
+//             setUserlogout(true);
+//             await API.get("/auth/logout");
 
-            localStorage.clear();
+//             localStorage.clear();
 
-            navigate("/", {
-                replace: true
-            });
-        } catch (error) {
-            console.log(error);
-        } finally {
-            setUserlogout(false)
-        }
-    };
+//             navigate("/", {
+//                 replace: true
+//             });
+//         } catch (error) {
+//             console.log(error);
+//         } finally {
+//             setUserlogout(false)
+//         }
+//     };
 
-    return (
-        <div className="container mt-4">
-            <div className="d-flex justify-content-between align-items-center mb-2">
-                <div className="d-flex gap-2 mb-1 align-items-center justify-content-center">
-                    <div className="overflow-hidden rounded-circle" style={{ width: "63px", height: "63px" }}>
-                        <img src="/favicon.ico" alt="Logo" />
-                    </div>
-                    <h2 className="text-center mb-2">
-                        MySocialMedia
-                    </h2>
-                </div>
-                {/* <button>
-                    Chat
-                </button> */}
-                <button
-                    disabled={userlogout}
-                    className="btn btn-danger"
-                    onClick={handleLogout}
-                >
-                    {userlogout ? "Logging out..." : "Logout"}
+//     return (
+//         <div className="container mt-4">
+//             <div className="d-flex justify-content-between align-items-center mb-2">
+//                 <div className="d-flex gap-2 mb-1 align-items-center justify-content-center">
+//                     <div className="overflow-hidden rounded-circle" style={{ width: "63px", height: "63px" }}>
+//                         <img src="/favicon.ico" alt="Logo" />
+//                     </div>
+//                     <h2 className="text-center mb-2">
+//                         MySocialMedia
+//                     </h2>
+//                 </div>
+//                 {/* <button>
+//                     Chat
+//                 </button> */}
+//                 <button
+//                     disabled={userlogout}
+//                     className="btn btn-danger"
+//                     onClick={handleLogout}
+//                 >
+//                     {userlogout ? "Logging out..." : "Logout"}
 
-                </button>
-            </div>
+//                 </button>
+//             </div>
 
-            <div>
-                <h3 className="fs-4">Welcome - {user?.username}</h3>
+//             <div>
+//                 <h3 className="fs-4">Welcome - {user?.username}</h3>
 
-            </div>
-            <CreatePost fetchPosts={fetchPosts} />
+//             </div>
+//             <CreatePost fetchPosts={fetchPosts} />
 
-            {posts.map((post) => (
-                <PostCard
-                    key={post._id}
-                    post={post}
-                    fetchPosts={fetchPosts}
-                    setPosts={setPosts}
-                />
-            ))}
-            {loadingPosts && (
-                <div className="text-center my-3">
-                    Loading posts...
-                </div>
-            )}
-            {!hasMore && posts.length > 0 && (
-                <div className="text-center my-3">
-                    No More Posts !
-                </div>
-            )}
-        </div>
-    );
-}
+//             {posts.map((post) => (
+//                 <PostCard
+//                     key={post._id}
+//                     post={post}
+//                     fetchPosts={fetchPosts}
+//                     setPosts={setPosts}
+//                 />
+//             ))}
+//             {loadingPosts && (
+//                 <div className="text-center my-3">
+//                     Loading posts...
+//                 </div>
+//             )}
+//             {!hasMore && posts.length > 0 && (
+//                 <div className="text-center my-3">
+//                     No More Posts !
+//                 </div>
+//             )}
+//         </div>
+//     );
+// }
 
-export default Feed;
+// export default Feed;

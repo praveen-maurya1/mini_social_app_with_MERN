@@ -1,6 +1,5 @@
 import { React, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import currentUser from "../../data/currentUser";
 import API from "../../services/api";
 
 function Sidebar({ user }) {
