@@ -118,7 +118,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
+        {/* <Route
           path="/admin"
           element={
             <ProtectedRoute>
@@ -134,7 +134,7 @@ function App() {
           <Route path="moderation" element={<Moderation />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="notifications" element={<AdminNotifications />} />
-        </Route>
+        </Route> */}
 
 
 
