@@ -6,7 +6,6 @@ import CreatePost from "../components/home/CreatePost";
 import PostCard from "../components/home/PostCard";
 import SuggestedUsers from "../components/home/SuggestedUsers";
 import Trending from "../components/home/Trending";
-// import posts from "../data/posts";
 import API from "../services/api";
 
 function Home() {
