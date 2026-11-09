@@ -41,15 +41,15 @@ import Chats from "./pages/Chats";
 import Notifications from "./pages/Notifications";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
-import AdminLayout from "./pages/admin/AdminLayout";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import Users from "./pages/admin/Users";
-import Posts from "./pages/admin/Posts";
-import Comments from "./pages/admin/Comments";
-import Reports from "./pages/admin/Reports";
-import Moderation from "./pages/admin/Moderation";
-import AdminSettings from "./pages/admin/Settings";
-import AdminNotifications from "./pages/admin/AdminNotifications";
+// import AdminLayout from "./pages/admin/AdminLayout";
+// import AdminDashboard from "./pages/admin/AdminDashboard";
+// import Users from "./pages/admin/Users";
+// import Posts from "./pages/admin/Posts";
+// import Comments from "./pages/admin/Comments";
+// import Reports from "./pages/admin/Reports";
+// import Moderation from "./pages/admin/Moderation";
+// import AdminSettings from "./pages/admin/Settings";
+// import AdminNotifications from "./pages/admin/AdminNotifications";
 
 
 
