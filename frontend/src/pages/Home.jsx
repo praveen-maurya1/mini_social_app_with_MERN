@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Sidebar from "../components/layout/Sidebar";
 import Topbar from "../components/layout/Topbar";
 import MobileNav from "../components/layout/MobileNav";
@@ -18,6 +18,10 @@ function Home() {
     const [loadingPosts, setLoadingPosts] = useState(false);
     const [error, setError] = useState("");
 
+    const feedRef = useRef(null);
+    const isFetchingRef = useRef(false);
+    const currentPageRef = useRef(1);
+
     const handlePostLikeUpdate = (postId, liked, likesCount) => {
         setPosts((prev) =>
             prev.map((post) =>
@@ -29,33 +33,31 @@ function Home() {
     };
 
     const fetchPosts = async (pageNumber = 1) => {
-        if (loadingPosts) return;
+        if (isFetchingRef.current) return;
 
         try {
+            isFetchingRef.current = true;
             setLoadingPosts(true);
             setError("");
 
-            const response = await API.get(
-                `/posts?page=${pageNumber}`
-            );
+            const response = await API.get(`/posts?page=${pageNumber}`);
 
             const newPosts = response.data.posts || [];
 
             if (pageNumber === 1) {
                 setPosts(newPosts);
             } else {
-                setPosts(prev => [
-                    ...prev,
-                    ...newPosts
-                ]);
+                setPosts(prev => [...prev, ...newPosts]);
             }
 
-            setHasMore(response.data.hasMore);
+            currentPageRef.current = pageNumber;
+            setHasMore(Boolean(response.data.hasMore));
 
         } catch (error) {
             console.log(error);
             setError("Unable to load posts. Please try again.");
         } finally {
+            isFetchingRef.current = false;
             setLoadingPosts(false);
         }
     };
@@ -85,22 +87,31 @@ function Home() {
     }, [page]);
 
     useEffect(() => {
+        const feed = feedRef.current;
+
+        if (!feed) return;
+
         const handleScroll = () => {
             const bottom =
-                window.innerHeight + window.scrollY >=
-                document.documentElement.scrollHeight - 200;
+                feed.scrollTop + feed.clientHeight >=
+                feed.scrollHeight - 200;
 
-            if (bottom && hasMore && !loadingPosts) {
-                setPage(prev => prev + 1);
+            if (
+                bottom &&
+                hasMore &&
+                !isFetchingRef.current
+            ) {
+                fetchPosts(currentPageRef.current + 1);
             }
         };
 
-        window.addEventListener("scroll", handleScroll);
+        feed.addEventListener("scroll", handleScroll);
 
         return () => {
-            window.removeEventListener("scroll", handleScroll);
+            feed.removeEventListener("scroll", handleScroll);
         };
-    }, [hasMore, loadingPosts]);
+
+    }, [hasMore, posts.length]);
 
 
     return (
@@ -111,13 +122,13 @@ function Home() {
             <div className="d-flex" style={{ height: "100vh", overflow: "hidden", }}>
                 <div className="d-none d-lg-block flex-shrink-0"><Sidebar user={user} /></div>
                 <div className="flex-grow-1 min-vw-0 d-flex flex-column"
-                    style={{ height: "100vh", overflow: "hidden", }}>
+                    style={{ height: "100vh", minHeight: 0, overflow: "hidden", }}>
                     <Topbar user={user} />
                     <div className="container-fluid flex-grow-1 p-0 " style={{ overflow: "hidden", }}>
                         <div className="row h-100 g-0">
-                            <main
+                            <main ref={feedRef}
                                 className="col-12 col-lg-8 col-xl-8 main-feed-scroll"
-                                style={{ height: "100%", overflowY: "auto", overflowX: "hidden" }}>
+                                style={{ height: "100%", minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
                                 <div className="container py-lg-4 onlyPc" style={{ paddingBottom: "70px" }}>
                                     <CreatePost fetchPosts={fetchPosts} user={user} />
 
@@ -131,7 +142,11 @@ function Home() {
 
                                                 <button
                                                     className="btn btn-outline-primary btn-sm"
-                                                    onClick={() => fetchPosts(1)}
+                                                    onClick={() => {
+                                                        requestedPageRef.current = 1;
+                                                        setPage(1);
+                                                        fetchPosts(1);
+                                                    }}
                                                     disabled={loadingPosts}
                                                 >
                                                     Retry
@@ -166,6 +181,7 @@ function Home() {
                                                 onLikeUpdate={handlePostLikeUpdate}
                                             />
                                         ))}
+                                        
 
                                         {loadingPosts && (
                                             <div className="text-center my-4">
@@ -185,7 +201,7 @@ function Home() {
                                             </p>
                                         )}
 
-                                    </div>
+                                    </div >
                                 </div>
                             </main>
                             <aside className="d-none d-lg-block col-lg-4 col-xl-4"
