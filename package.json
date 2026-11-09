@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "browser-image-compression": "^2.0.2"
+    "browser-image-compression": "^2.0.2",
+    "react-easy-crop": "^6.2.4"
   }
 }

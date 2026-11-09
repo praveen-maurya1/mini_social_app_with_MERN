@@ -1,380 +1,379 @@
-import { useState } from "react";
-import API from "../services/api";
+// import { useState } from "react";
+// import API from "../services/api";
 
-function PostCard({
-    post,
-    fetchPosts,
-    setPosts
-}) {
+// function PostCard({
+//     post,
+//     fetchPosts,
+//     setPosts
+// }) {
 
-    const [comment, setComment] =
-        useState("");
+//     const [comment, setComment] =
+//         useState("");
 
-    const [loading, setLoading] =
-        useState(false);
+//     const [loading, setLoading] =
+//         useState(false);
 
-    const [visibleComments,
-        setVisibleComments] =
-        useState(1);
+//     const [visibleComments,
+//         setVisibleComments] =
+//         useState(1);
 
-    const [liking, setLiking] =
-        useState(false);
+//     const [liking, setLiking] =
+//         useState(false);
 
-    const currentUser = JSON.parse(
-        localStorage.getItem("user")
-    );
+//     const currentUser = JSON.parse(
+//         localStorage.getItem("user")
+//     );
 
-    const currentUserId =
-        currentUser?._id;
+//     const currentUserId =
+//         currentUser?._id;
 
-    const liked =
-        currentUser &&
-        post.likes.some(
-            like =>
-                like.userId?.toString()
-                === currentUserId
-        );
+//     const liked =
+//         currentUser &&
+//         post.likes.some(
+//             like =>
+//                 like.userId?.toString()
+//                 === currentUserId
+//         );
 
 
 
-    // LIKE
+//     // LIKE
 
-    const handleLike = async () => {
+//     const handleLike = async () => {
 
-        if (liking) return;
+//         if (liking) return;
 
-        const user = JSON.parse(
-            localStorage.getItem("user")
-        );
+//         const user = JSON.parse(
+//             localStorage.getItem("user")
+//         );
 
-        if (!user) return;
+//         if (!user) return;
 
-        setLiking(true);
+//         setLiking(true);
 
-        const userId = user._id;
+//         const userId = user._id;
 
-        setPosts(prevPosts =>
-            prevPosts.map(p => {
+//         setPosts(prevPosts =>
+//             prevPosts.map(p => {
 
-                if (
-                    p._id !== post._id
-                ) return p;
+//                 if (
+//                     p._id !== post._id
+//                 ) return p;
 
-                const alreadyLiked =
-                    p.likes.some(
-                        like =>
-                            like.userId
-                                ?.toString()
-                            === userId
-                    );
+//                 const alreadyLiked =
+//                     p.likes.some(
+//                         like =>
+//                             like.userId
+//                                 ?.toString()
+//                             === userId
+//                     );
 
-                return {
-                    ...p,
-                    likes: alreadyLiked
-                        ? p.likes.filter(
-                            like =>
-                                like.userId
-                                    ?.toString()
-                                !== userId
-                        )
-                        : [...p.likes,
-                        {
-                            userId,
-                            username:
-                                user.username
+//                 return {
+//                     ...p,
+//                     likes: alreadyLiked
+//                         ? p.likes.filter(
+//                             like =>
+//                                 like.userId
+//                                     ?.toString()
+//                                 !== userId
+//                         )
+//                         : [...p.likes,
+//                         {
+//                             userId,
+//                             username:
+//                                 user.username
 
-                        }
+//                         }
 
-                        ]
+//                         ]
 
-                };
+//                 };
 
-            })
-        );
+//             })
+//         );
 
-        try {
+//         try {
 
-            await API.put(
-                `/posts/${post._id}/like`
-            );
+//             await API.put(
+//                 `/posts/${post._id}/like`
+//             );
 
-        } catch (error) {
+//         } catch (error) {
 
-            console.log(error);
+//             console.log(error);
 
-            fetchPosts(1);
+//             fetchPosts(1);
 
-        } finally {
+//         } finally {
 
-            setLiking(false);
+//             setLiking(false);
 
-        }
-    };
+//         }
+//     };
 
 
 
-    // COMMENT
+//     // COMMENT
 
-    const handleComment =
-        async () => {
+//     const handleComment =   async () => {
 
-            if (
-                !comment.trim()
-            ) return;
+//             if (
+//                 !comment.trim()
+//             ) return;
 
-            const currentUser =
-                JSON.parse(
-                    localStorage.getItem(
-                        "user"
-                    )
-                );
+//             const currentUser =
+//                 JSON.parse(
+//                     localStorage.getItem(
+//                         "user"
+//                     )
+//                 );
 
-            if (!currentUser)
-                return;
+//             if (!currentUser)
+//                 return;
 
-            const newComment = {
+//             const newComment = {
 
-                username:
-                    currentUser.username,
+//                 username:
+//                     currentUser.username,
 
-                text: comment
+//                 text: comment
 
-            };
+//             };
 
-            setPosts(prevPosts =>
+//             setPosts(prevPosts =>
 
-                prevPosts.map(p =>
+//                 prevPosts.map(p =>
 
-                    p._id === post._id
-                        ? {
-                            ...p,
-                            comments: [
-                                ...p.comments,
-                                newComment
-                            ]
-                        }
-                        : p
-                )
-            );
+//                     p._id === post._id
+//                         ? {
+//                             ...p,
+//                             comments: [
+//                                 ...p.comments,
+//                                 newComment
+//                             ]
+//                         }
+//                         : p
+//                 )
+//             );
 
-            const commentText =
-                comment;
+//             const commentText =
+//                 comment;
 
-            setComment("");
+//             setComment("");
 
-            setVisibleComments(
-                prev =>
-                    Math.max(
-                        prev,
-                        10
-                    )
-            );
+//             setVisibleComments(
+//                 prev =>
+//                     Math.max(
+//                         prev,
+//                         10
+//                     )
+//             );
 
-            try {
+//             try {
 
-                setLoading(true);
+//                 setLoading(true);
 
-                await API.post(
+//                 await API.post(
 
-                    `/posts/${post._id}/comment`,
+//                     `/posts/${post._id}/comment`,
 
-                    {
+//                     {
 
-                        text:
-                            commentText
+//                         text:
+//                             commentText
 
-                    }
+//                     }
 
-                );
+//                 );
 
-            } catch (error) {
+//             } catch (error) {
 
-                console.log(error);
+//                 console.log(error);
 
-                fetchPosts(1);
+//                 fetchPosts(1);
 
-            } finally {
+//             } finally {
 
-                setLoading(false);
+//                 setLoading(false);
 
-            }
+//             }
 
-        };
+//         };
 
 
 
-    return (
-        <div className="card mb-3 p-3 shadow-sm">
-            <h5>{post.username}</h5>
-            {post.text && (
-                <p>
-                    {post.text}
-                </p>
-            )}
-            {post.image && (
-                <div className="postImg">
-                    <img
-                        src={post.image}
-                        alt="post"
-                        className="img-fluid rounded mb-3"
-                    />
-                </div>
-            )}
-            <div className="d-flex gap-2 mb-3"            >
-                <button
-                    disabled={liking}
-                    className={`btn btn-sm ${liked
-                        ? "btn-danger"
-                        : "btn-outline-danger"
-                        }`}
-                    onClick={handleLike}>
+//     return (
+//         <div className="card mb-3 p-3 shadow-sm">
+//             <h5>{post.username}</h5>
+//             {post.text && (
+//                 <p>
+//                     {post.text}
+//                 </p>
+//             )}
+//             {post.image && (
+//                 <div className="postImg">
+//                     <img
+//                         src={post.image}
+//                         alt="post"
+//                         className="img-fluid rounded mb-3"
+//                     />
+//                 </div>
+//             )}
+//             <div className="d-flex gap-2 mb-3"            >
+//                 <button
+//                     disabled={liking}
+//                     className={`btn btn-sm ${liked
+//                         ? "btn-danger"
+//                         : "btn-outline-danger"
+//                         }`}
+//                     onClick={handleLike}>
 
-                    {liked
-                        ? "❤️"
-                        : "🤍"}
+//                     {liked
+//                         ? "❤️"
+//                         : "🤍"}
 
-                    {" "}
+//                     {" "}
 
-                    {post.likes.length}
+//                     {post.likes.length}
 
-                </button>
+//                 </button>
 
 
 
-                <button className="btn btn-outline-secondary btn-sm"                >
-                    💬
+//                 <button className="btn btn-outline-secondary btn-sm"                >
+//                     💬
 
-                    {" "}
+//                     {" "}
 
-                    {post.comments.length}
+//                     {post.comments.length}
 
-                </button>
+//                 </button>
 
-            </div>
+//             </div>
 
 
 
-            <div
-                className="d-flex gap-2 mb-3"
-            >
+//             <div
+//                 className="d-flex gap-2 mb-3"
+//             >
 
-                <input
+//                 <input
 
-                    type="text" className="form-control" placeholder="Write a comment..." 
-                    value={comment}
+//                     type="text" className="form-control" placeholder="Write a comment..." 
+//                     value={comment}
 
-                    onChange={(e) =>
+//                     onChange={(e) =>
 
-                        setComment(
-                            e.target.value
-                        )
+//                         setComment(
+//                             e.target.value
+//                         )
 
-                    }
+//                     }
 
-                />
+//                 />
 
 
 
-                <button
+//                 <button
 
-                    disabled={
-                        !comment.trim()
-                        || loading
-                    }
+//                     disabled={
+//                         !comment.trim()
+//                         || loading
+//                     }
 
-                    className="btn btn-primary"
+//                     className="btn btn-primary"
 
-                    onClick={
-                        handleComment
-                    }
+//                     onClick={
+//                         handleComment
+//                     }
 
-                >
+//                 >
 
-                    {loading
+//                     {loading
 
-                        ? "Adding..."
+//                         ? "Adding..."
 
-                        : "Add"}
+//                         : "Add"}
 
-                </button>
+//                 </button>
 
-            </div>
+//             </div>
 
 
 
-            {post.comments
+//             {post.comments
 
-                .slice(
-                    0,
-                    visibleComments
-                )
+//                 .slice(
+//                     0,
+//                     visibleComments
+//                 )
 
-                .map(
-                    (
-                        comment,
-                        index
-                    ) => (
+//                 .map(
+//                     (
+//                         comment,
+//                         index
+//                     ) => (
 
-                        <div
+//                         <div
 
-                            key={index}
+//                             key={index}
 
-                            className="border-top pt-2 mt-2"
+//                             className="border-top pt-2 mt-2"
 
-                        >
+//                         >
 
-                            <strong>
+//                             <strong>
 
-                                {
-                                    comment.username
-                                }
+//                                 {
+//                                     comment.username
+//                                 }
 
-                            </strong>
+//                             </strong>
 
-                            <p
-                                className="mb-1"
-                            >
+//                             <p
+//                                 className="mb-1"
+//                             >
 
-                                {
-                                    comment.text
-                                }
+//                                 {
+//                                     comment.text
+//                                 }
 
-                            </p>
+//                             </p>
 
-                            {post.comments.length >
+//                             {post.comments.length >
 
-                                visibleComments && (
+//                                 visibleComments && (
 
-                                    <button
+//                                     <button
 
-                                        className="btn btn-link p-0 mt-2"
+//                                         className="btn btn-link p-0 mt-2"
 
-                                        onClick={() =>
+//                                         onClick={() =>
 
-                                            setVisibleComments(
+//                                             setVisibleComments(
 
-                                                prev =>
+//                                                 prev =>
 
-                                                    prev + 10
+//                                                     prev + 10
 
-                                            )
+//                                             )
 
-                                        }
+//                                         }
 
-                                    >
+//                                     >
 
-                                        View more comments
+//                                         View more comments
 
-                                    </button>
+//                                     </button>
 
-                                )}
-                        </div>
+//                                 )}
+//                         </div>
 
-                    )
-                )}
-        </div>
+//                     )
+//                 )}
+//         </div>
 
-    );
-}
+//     );
+// }
 
-export default PostCard;
+// export default PostCard;

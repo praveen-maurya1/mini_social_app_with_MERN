@@ -74,6 +74,7 @@ function Feed() {
         }
 
     };
+    
     useEffect(() => {
 
         fetchMe();
@@ -81,6 +82,7 @@ function Feed() {
         fetchPosts(1);
 
     }, []);
+
     useEffect(() => {
 
         const handleScroll = () => {
@@ -113,6 +115,7 @@ function Feed() {
             );
 
     }, [hasMore, loadingPosts]);
+
     useEffect(() => {
 
         if (page > 1) {
@@ -152,7 +155,9 @@ function Feed() {
                         MySocialMedia
                     </h2>
                 </div>
-
+                {/* <button>
+                    Chat
+                </button> */}
                 <button
                     disabled={userlogout}
                     className="btn btn-danger"

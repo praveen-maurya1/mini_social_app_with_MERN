@@ -32,4 +32,8 @@ authRouter.get('/logout-all', authController.logoutAll);
 
 authRouter.post('/verify-email', authController.verifyEmail);
 
+//GET /api/auth/healthCheckUp
+
+authRouter.get('/healthCheckUp', authController.healthCheckUp);
+
 export default authRouter;

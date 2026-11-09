@@ -78,7 +78,10 @@ export async function login(req, res) {
 
     const { email, password } = req.body;
 
-    const user = await userModel.findOne({ email });
+    // const user = await userModel.findOne({ email });
+    const user = await userModel
+        .findOne({ email })
+        .select("+password");
 
     if (!user) {
         return res.status(401).json({
@@ -168,74 +171,161 @@ export async function getMe(req, res) {
 
     res.status(200).json({
         message: 'User fetched successfully',
-        user: {
-            username: req.user.username,
-            email: req.user.email,
-            verified: req.user.verified
-        }
+        user
     });
 
 }
 
+// export async function refreshToken(req, res) {
+
+//     const refreshToken = req.cookies.refreshToken;
+
+//     if (!refreshToken) {
+//         return res.status(401).json({
+//             message: 'Refresh token not found'
+//         });
+//     }
+
+//     const decoded = jwt.verify(refreshToken, config.JWT_SECRET);
+
+//     const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+
+//     const session = await sessionModel.findOne({
+//         refreshTokenHash,
+//         revoke: false
+//     });
+
+//     if (!session) {
+//         return res.status(401).json({
+//             message: 'Invalid refresh token'
+//         });
+//     }
+
+//     const accessToken = jwt.sign({
+//         id: decoded.id
+//     }, config.JWT_SECRET,
+//         {
+//             expiresIn: '15m'
+//         }
+//     );
+
+//     const newRefreshToken = jwt.sign({
+//         id: decoded.id
+//     }, config.JWT_SECRET,
+//         {
+//             expiresIn: '7d'
+//         }
+//     );
+
+//     const newRefreshTokenHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
+
+//     session.refreshTokenHash = newRefreshTokenHash;
+//     await session.save();
+
+//     res.cookie('refreshToken', newRefreshToken, {
+//         httpOnly: true,
+//         secure: true,
+//         // sameSite: 'strict',//for development only
+//         sameSite: 'none',
+//         maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+//     });
+
+//     res.status(200).json({
+//         message: 'Access token refreshed successfully',
+//         accessToken
+//     });
+
+// }
+
 export async function refreshToken(req, res) {
+    try {
+        const refreshToken = req.cookies.refreshToken;
 
-    const refreshToken = req.cookies.refreshToken;
+        if (!refreshToken) {
+            return res.status(401).json({
+                message: "Refresh token not found",
+            });
+        }
 
-    if (!refreshToken) {
+        // Verify refresh token
+        const decoded = jwt.verify(
+            refreshToken,
+            config.JWT_SECRET
+        );
+
+        // Hash refresh token
+        const refreshTokenHash = crypto
+            .createHash("sha256")
+            .update(refreshToken)
+            .digest("hex");
+
+        // Find active session belonging to this user
+        const session = await sessionModel.findOne({
+            user: decoded.id,
+            refreshTokenHash,
+            revoke: false,
+        });
+
+        if (!session) {
+            return res.status(401).json({
+                message: "Invalid or revoked session",
+            });
+        }
+
+        // Generate new access token WITH sessionId
+        const accessToken = jwt.sign(
+            {
+                id: decoded.id,
+                sessionId: session._id,
+            },
+            config.JWT_SECRET,
+            {
+                expiresIn: "15m",
+            }
+        );
+
+        // Rotate refresh token
+        const newRefreshToken = jwt.sign(
+            {
+                id: decoded.id,
+            },
+            config.JWT_SECRET,
+            {
+                expiresIn: "7d",
+            }
+        );
+
+        const newRefreshTokenHash = crypto
+            .createHash("sha256")
+            .update(newRefreshToken)
+            .digest("hex");
+
+        session.refreshTokenHash = newRefreshTokenHash;
+        await session.save();
+
+        // Cookie configuration
+        res.cookie("refreshToken", newRefreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite:
+                process.env.NODE_ENV === "production"
+                    ? "none"
+                    : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        return res.status(200).json({
+            message: "Access token refreshed successfully",
+            accessToken,
+        });
+
+    } catch (error) {
+        console.error("Refresh token error:", error.message);
+
         return res.status(401).json({
-            message: 'Refresh token not found'
+            message: "Invalid or expired refresh token",
         });
     }
-
-    const decoded = jwt.verify(refreshToken, config.JWT_SECRET);
-
-    const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-
-    const session = await sessionModel.findOne({
-        refreshTokenHash,
-        revoke: false
-    });
-
-    if (!session) {
-        return res.status(401).json({
-            message: 'Invalid refresh token'
-        });
-    }
-
-    const accessToken = jwt.sign({
-        id: decoded.id
-    }, config.JWT_SECRET,
-        {
-            expiresIn: '15m'
-        }
-    );
-
-    const newRefreshToken = jwt.sign({
-        id: decoded.id
-    }, config.JWT_SECRET,
-        {
-            expiresIn: '7d'
-        }
-    );
-
-    const newRefreshTokenHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
-
-    session.refreshTokenHash = newRefreshTokenHash;
-    await session.save();
-
-    res.cookie('refreshToken', newRefreshToken, {
-        httpOnly: true,
-        secure: true,
-        // sameSite: 'strict',//for development only
-        sameSite: 'none',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
-
-    res.status(200).json({
-        message: 'Access token refreshed successfully',
-        accessToken
-    });
-
 }
 
 export async function logout(req, res) {
@@ -333,4 +423,10 @@ export async function verifyEmail(req, res) {
         }
     });
 
+}
+
+export async function healthCheckUp(req, res) {
+    return res.status(200).json({
+        message: 'starting now',
+    });
 }

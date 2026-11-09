@@ -1,0 +1,181 @@
+:root {
+   /* =========================
+     Brand Colors
+  ========================= */
+   --color-primary: #4F46E5;
+   --color-primary-hover: #4338CA;
+   --color-primary-light: #EEF2FF;
+
+   /* =========================
+     Backgrounds
+  ========================= */
+   --color-background: #F8FAFC;
+   --color-surface: #FFFFFF;
+   --color-surface-secondary: #F1F5F9;
+   --color-surface-hover: #F8FAFC;
+
+   /* =========================
+     Text
+  ========================= */
+   --color-text-primary: #0F172A;
+   --color-text-secondary: #475569;
+   --color-text-muted: #94A3B8;
+   --color-text-disabled: #CBD5E1;
+
+   /* =========================
+     Borders
+  ========================= */
+   --color-border: #E2E8F0;
+   --color-border-light: #F1F5F9;
+   --color-border-focus: #4F46E5;
+
+   /* =========================
+     Status
+  ========================= */
+   --color-success: #16A34A;
+   --color-success-light: #DCFCE7;
+
+   --color-danger: #DC2626;
+   --color-danger-light: #FEE2E2;
+
+   --color-warning: #D97706;
+   --color-warning-light: #FEF3C7;
+
+   --color-info: #2563EB;
+   --color-info-light: #DBEAFE;
+
+   /* =========================
+     Social Actions
+  ========================= */
+   --color-like: #EF4444;
+   --color-comment: #4F46E5;
+   --color-share: #0EA5E9;
+   --color-bookmark: #F59E0B;
+
+   /* =========================
+     Common
+  ========================= */
+   --color-white: #FFFFFF;
+   --color-black: #000000;
+   --color-transparent: transparent;
+
+   /* =========================
+     Border Radius
+  ========================= */
+   --radius-sm: 6px;
+   --radius-md: 10px;
+   --radius-lg: 14px;
+   --radius-xl: 18px;
+   --radius-pill: 999px;
+
+   /* =========================
+     Shadows
+  ========================= */
+   --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+   --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+   --shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.10);
+}
+
+/* =========================
+   Main Feed Scrollbar
+========================= */
+
+.main-feed-scroll {
+   scrollbar-width: thin;
+   scrollbar-color: var(--color-border) transparent;
+}
+
+.main-feed-scroll::-webkit-scrollbar {
+   width: 6px;
+}
+
+.main-feed-scroll::-webkit-scrollbar-track {
+   background: transparent;
+}
+
+.main-feed-scroll::-webkit-scrollbar-thumb {
+   background-color: var(--color-border);
+   border-radius: var(--radius-pill);
+}
+
+.main-feed-scroll::-webkit-scrollbar-thumb:hover {
+   background-color: var(--color-text-muted);
+}
+
+
+@media (min-width: 1025px) {
+    /* Desktop CSS here */
+    .onlyPc{
+      max-width: 500px !important;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+/* =========================
+   Global Reset
+========================= */
+
+* {
+   box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+   min-height: 100%;
+}
+
+body {
+   margin: 0;
+   background-color: var(--color-background);
+   color: var(--color-text-primary);
+   font-family:
+      Inter,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+}
+
+
+/* =========================
+   Links
+========================= */
+
+a {
+   color: inherit;
+   text-decoration: none;
+}
+
+
+/* =========================
+   Buttons
+========================= */
+
+button,
+input,
+textarea {
+   font: inherit;
+}
+
+button {
+   cursor: pointer;
+}
+
+
+/* =========================
+   Selection
+========================= */
+
+::selection {
+   background-color: var(--color-primary-light);
+   color: var(--color-primary);
+}
