@@ -21,16 +21,14 @@ postRouter.put("/:id/like", authMiddleware, postController.likePost);
 // POST /api/posts/POST_ID/comment
 postRouter.post("/:id/comment", authMiddleware, postController.addComment);
 
-
-// // PUT /api/posts/comment/COMMENT_ID/like
-// postRouter.put("/comment/:id/like", authMiddleware, postController.likeComment);
-
 // PUT /api/posts/comment/COMMENT_ID/like
-postRouter.put(
-    "/comment/:id/like",
-    authMiddleware,
-    postController.likeComment
-);
+postRouter.put("/comment/:id/like", authMiddleware, postController.likeComment);
 
+// GET /api/posts/search
+postRouter.get("/search", authMiddleware, postController.search);
+
+
+// GET /api/posts/
+postRouter.get("/:id", authMiddleware, postController.getPostById);
 
 export default postRouter;

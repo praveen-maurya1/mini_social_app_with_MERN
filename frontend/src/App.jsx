@@ -41,6 +41,8 @@ import Chats from "./pages/Chats";
 import Notifications from "./pages/Notifications";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
+import PostDetailsDialog from "./components/home/PostDetails";
+
 // import AdminLayout from "./pages/admin/AdminLayout";
 // import AdminDashboard from "./pages/admin/AdminDashboard";
 // import Users from "./pages/admin/Users";
@@ -115,6 +117,17 @@ function App() {
           element={
             <ProtectedRoute>
               <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/post/:id"
+          element={
+            <ProtectedRoute>
+              <>
+                <Home />
+                <PostDetailsDialog />
+              </>
             </ProtectedRoute>
           }
         />

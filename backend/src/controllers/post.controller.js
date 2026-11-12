@@ -1,6 +1,7 @@
 import postModel from "../models/post.model.js";
 import commentModel from "../models/comments.model.js";
 import mongoose from "mongoose";
+import userModel from "../models/user.model.js";
 
 export async function createPost(req, res) {
     const { text, image } = req.body;
@@ -518,6 +519,177 @@ export async function likeComment(req, res) {
 
         return res.status(500).json({
             message: error.message
+        });
+    }
+}
+
+const escapeRegex = (value) =>
+    value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+
+export async function search(req, res) {
+    try {
+        const { q = "", type = "all" } = req.query;
+
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
+        const skip = (page - 1) * limit;
+
+        const query = q.trim();
+
+        if (!query) {
+            return res.status(200).json({
+                users: [],
+                posts: [],
+                usersHasMore: false,
+                postsHasMore: false
+            });
+        }
+
+        if (!["all", "users", "posts"].includes(type)) {
+            return res.status(400).json({
+                message: "Invalid search type"
+            });
+        }
+
+        const regex = new RegExp(escapeRegex(query), "i");
+
+        let users = [];
+        let posts = [];
+        let usersHasMore = false;
+        let postsHasMore = false;
+
+        // Search Users
+        if (type === "all" || type === "users") {
+            const userResults = await userModel.find({
+                status: "active",
+                $or: [
+                    { username: regex },
+                    { displayName: regex },
+                    { firstName: regex },
+                    { lastName: regex }
+                ]
+            })
+                .select("username displayName firstName lastName image verified isPlatformVerified bio")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit + 1)
+                .lean();
+
+            usersHasMore = userResults.length > limit;
+            users = userResults.slice(0, limit);
+        }
+
+        // Search Posts
+        if (type === "all" || type === "posts") {
+            const postResults = await postModel.find({
+                status: "active",
+                visibility: "public",
+                $or: [
+                    { text: regex },
+                    { username: regex }
+                ]
+            })
+                .populate(
+                    "userId",
+                    "username displayName firstName lastName image verified isPlatformVerified"
+                )
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit + 1)
+                .lean();
+
+            postsHasMore = postResults.length > limit;
+
+            posts = postResults.slice(0, limit).map(post => ({
+                ...post,
+                user: post.userId ? {
+                    ...post.userId,
+                    displayName:
+                        post.userId.displayName?.trim() ||
+                        [post.userId.firstName, post.userId.lastName]
+                            .filter(Boolean).join(" ") ||
+                        post.userId.username
+                } : null,
+                isLiked: post.likes?.some(
+                    like => like.userId?.toString() === req.user._id.toString()
+                ) || false
+            }));
+        }
+
+        return res.status(200).json({
+            message: "Search results fetched successfully",
+            users,
+            posts,
+            pagination: {
+                page,
+                limit,
+                usersHasMore,
+                postsHasMore
+            }
+        });
+
+    } catch (error) {
+        console.error("Search Error:", error);
+        return res.status(500).json({
+            message: "Unable to search right now"
+        });
+    }
+}
+
+
+
+export async function getPostById(req, res) {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid post ID" });
+        }
+
+        const post = await postModel.findOne({
+            _id: id,
+            status: "active",
+            $or: [
+                { visibility: "public" },
+                { userId: req.user._id }
+            ]
+        })
+            .populate(
+                "userId",
+                "username displayName firstName lastName image verified isPlatformVerified"
+            )
+            .lean();
+
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        const user = post.userId;
+
+        const formattedPost = {
+            ...post,
+            user: user ? {
+                ...user,
+                displayName:
+                    user.displayName?.trim() ||
+                    [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+                    user.username
+            } : null,
+            isLiked: post.likes?.some(
+                like => like.userId?.toString() === req.user._id.toString()
+            ) || false
+        };
+
+        return res.status(200).json({
+            message: "Post fetched successfully",
+            post: formattedPost
+        });
+
+    } catch (error) {
+        console.error("Get Post Error:", error);
+        return res.status(500).json({
+            message: "Unable to fetch post"
         });
     }
 }

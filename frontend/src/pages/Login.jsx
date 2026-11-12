@@ -130,18 +130,18 @@
 
 
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import API from "../services/api";
 import { useToast } from "../context/ToastContext";
 
 function Login() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { showToast } = useToast();
     const [formData, setFormData] = useState({
         email: "",
         password: "",
     });
-
     const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
@@ -174,7 +174,16 @@ function Login() {
             showToast(
                 "Logged In successfully", "success"
             );
-            navigate("/home");
+            const destination = location.state?.from;
+
+            if (destination) {
+                navigate(
+                    `${destination.pathname}${destination.search || ""}${destination.hash || ""}`,
+                    { replace: true }
+                );
+            } else {
+                navigate("/home", { replace: true });
+            }
         } catch (error) {
             // alert(
             //     error.response?.data?.message ||

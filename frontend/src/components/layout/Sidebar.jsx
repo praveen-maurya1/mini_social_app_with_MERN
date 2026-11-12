@@ -53,6 +53,13 @@ function Sidebar({ user }) {
             icon: "bi-gear",
         },
     ];
+    const handleLogoClick = () => {
+        if (window.location.pathname === "/home") {
+            window.location.reload();
+        } else {
+            navigate("/home");
+        }
+    };
 
     return (
         <aside
@@ -65,7 +72,11 @@ function Sidebar({ user }) {
         >
             {/* Brand */}
             <div className="d-flex align-items-center gap-2 mb-5">
+
                 <div
+                    onClick={handleLogoClick}
+                    role="button"
+                    title="Go to Home"
                     className="d-flex align-items-center justify-content-center fw-bold"
                     style={{
                         width: "38px",
@@ -73,14 +84,18 @@ function Sidebar({ user }) {
                         borderRadius: "var(--radius-md)",
                         backgroundColor: "var(--color-primary)",
                         color: "var(--color-white)",
+                        cursor: "pointer",
                     }}
                 >
                     C
                 </div>
 
                 <span
+                    onClick={handleLogoClick}
+                    role="button"
+                    title="Go to Home"
                     className="fs-5 fw-bold"
-                    style={{ color: "var(--color-text-primary)" }}
+                    style={{ color: "var(--color-text-primary)", cursor: "pointer", }}
                 >
                     Caché
                 </span>

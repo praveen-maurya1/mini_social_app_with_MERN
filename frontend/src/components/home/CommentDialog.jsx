@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import API from "../../services/api";
 
 function CommentDialog({ post, onClose, user }) {
@@ -7,11 +7,11 @@ function CommentDialog({ post, onClose, user }) {
     const [newComment, setNewComment] = useState("");
     const [replyInputs, setReplyInputs] = useState({});
     const [activeReply, setActiveReply] = useState(null);
-    const [likedComments, setLikedComments] = useState([]);
+    // const [likedComments, setLikedComments] = useState([]);
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-
+    const pendingLikesRef = useRef(new Set());
     useEffect(() => {
         fetchComments();
     }, [post?._id]);
@@ -38,19 +38,80 @@ function CommentDialog({ post, onClose, user }) {
     };
     // Add new comment
 
+    // const handleAddComment = async () => {
+    //     if (!newComment.trim()) return;
+
+    //     try {
+    //         const response = await API.post(`/posts/${post._id}/comment`, {
+    //             text: newComment.trim()
+    //         });
+
+    //         const comment = response.data.comment;
+
+    //         // Add newly created comment to the list
+    //         setComments((prev) => [...prev, {
+    //             ...comment,
+    //             user: {
+    //                 _id: comment.userId,
+    //                 username: comment.username,
+    //                 displayName: user?.displayName || user?.username || comment.username,
+    //                 image: comment.userImage || ""
+    //             },
+    //             likes: [],
+    //             likesCount: 0,
+    //             replies: []
+    //         }]);
+
+    //         setNewComment("");
+
+    //     } catch (error) {
+    //         console.error("Add comment error:", error);
+
+    //         alert(
+    //             error.response?.data?.message ||
+    //             "Unable to add comment. Please try again."
+    //         );
+    //     }
+    // };
+
     const handleAddComment = async () => {
-        if (!newComment.trim()) return;
+        const text = newComment.trim();
+
+        if (!text) return;
+
+        const tempId = `temp-${Date.now()}`;
+
+        const optimisticComment = {
+            _id: tempId,
+            text,
+            username: user?.username || "You",
+            createdAt: new Date().toISOString(),
+            isLiked: false,
+            likesCount: 0,
+            repliesCount: 0,
+            replies: [],
+            user: {
+                _id: user?._id,
+                username: user?.username,
+                displayName: user?.displayName || user?.username || "You",
+                image: user?.image || ""
+            }
+        };
+
+        // Immediately show comment
+        setComments(prev => [...prev, optimisticComment]);
+        setNewComment("");
 
         try {
             const response = await API.post(`/posts/${post._id}/comment`, {
-                text: newComment.trim()
+                text
             });
 
             const comment = response.data.comment;
 
-            // Add newly created comment to the list
-            setComments((prev) => [...prev, {
+            const formattedComment = {
                 ...comment,
+                isLiked: false,
                 user: {
                     _id: comment.userId,
                     username: comment.username,
@@ -60,12 +121,24 @@ function CommentDialog({ post, onClose, user }) {
                 likes: [],
                 likesCount: 0,
                 replies: []
-            }]);
+            };
 
-            setNewComment("");
+            // Replace temporary comment with actual backend comment
+            setComments(prev =>
+                prev.map(item =>
+                    item._id === tempId ? formattedComment : item
+                )
+            );
 
         } catch (error) {
             console.error("Add comment error:", error);
+
+            // Rollback
+            setComments(prev =>
+                prev.filter(comment => comment._id !== tempId)
+            );
+
+            setNewComment(text);
 
             alert(
                 error.response?.data?.message ||
@@ -77,10 +150,104 @@ function CommentDialog({ post, onClose, user }) {
 
     // Add reply
 
+    // const handleAddReply = async (commentId) => {
+    //     const replyText = replyInputs[commentId]?.trim();
+
+    //     if (!replyText) return;
+
+    //     try {
+    //         const response = await API.post(`/posts/${post._id}/comment`, {
+    //             text: replyText,
+    //             parentComment: commentId
+    //         });
+
+    //         const reply = response.data.comment;
+
+    //         const formattedReply = {
+    //             ...reply,
+    //             user: {
+    //                 _id: reply.userId,
+    //                 username: reply.username,
+    //                 displayName: user?.displayName || user?.username || reply.username,
+    //                 image: reply.userImage || ""
+    //             },
+    //             likes: [],
+    //             likesCount: 0
+    //         };
+
+    //         setComments((prev) =>
+    //             prev.map((comment) =>
+    //                 comment._id === commentId
+    //                     ? {
+    //                         ...comment,
+    //                         replies: [
+    //                             ...(comment.replies || []),
+    //                             formattedReply
+    //                         ],
+    //                         repliesCount: (comment.repliesCount || 0) + 1
+    //                     }
+    //                     : comment
+    //             )
+    //         );
+
+    //         setReplyInputs((prev) => ({
+    //             ...prev,
+    //             [commentId]: ""
+    //         }));
+
+    //         setActiveReply(null);
+
+    //     } catch (error) {
+    //         console.error("Add reply error:", error);
+
+    //         alert(
+    //             error.response?.data?.message ||
+    //             "Unable to add reply. Please try again."
+    //         );
+    //     }
+    // };
+
     const handleAddReply = async (commentId) => {
         const replyText = replyInputs[commentId]?.trim();
 
         if (!replyText) return;
+
+        const tempId = `temp-${Date.now()}`;
+
+        const optimisticReply = {
+            _id: tempId,
+            text: replyText,
+            username: user?.username || "You",
+            createdAt: new Date().toISOString(),
+            isLiked: false,
+            likesCount: 0,
+            user: {
+                _id: user?._id,
+                username: user?.username,
+                displayName: user?.displayName || user?.username || "You",
+                image: user?.image || ""
+            }
+        };
+
+        // Immediately show reply
+        setComments(prev =>
+            prev.map(comment =>
+                comment._id === commentId
+                    ? {
+                        ...comment,
+                        replies: [...(comment.replies || []), optimisticReply],
+                        repliesCount: (comment.repliesCount || 0) + 1
+                    }
+                    : comment
+            )
+        );
+
+        setReplyInputs(prev => ({
+            ...prev,
+            [commentId]: ""
+        }));
+
+        setActiveReply(null);
 
         try {
             const response = await API.post(`/posts/${post._id}/comment`, {
@@ -92,6 +259,7 @@ function CommentDialog({ post, onClose, user }) {
 
             const formattedReply = {
                 ...reply,
+                isLiked: false,
                 user: {
                     _id: reply.userId,
                     username: reply.username,
@@ -102,30 +270,47 @@ function CommentDialog({ post, onClose, user }) {
                 likesCount: 0
             };
 
-            setComments((prev) =>
-                prev.map((comment) =>
+            // Replace temporary reply with actual backend reply
+            setComments(prev =>
+                prev.map(comment =>
                     comment._id === commentId
                         ? {
                             ...comment,
-                            replies: [
-                                ...(comment.replies || []),
-                                formattedReply
-                            ],
-                            repliesCount: (comment.repliesCount || 0) + 1
+                            replies: comment.replies.map(item =>
+                                item._id === tempId ? formattedReply : item
+                            )
                         }
                         : comment
                 )
             );
 
-            setReplyInputs((prev) => ({
-                ...prev,
-                [commentId]: ""
-            }));
-
-            setActiveReply(null);
-
         } catch (error) {
             console.error("Add reply error:", error);
+
+            // Rollback
+            setComments(prev =>
+                prev.map(comment =>
+                    comment._id === commentId
+                        ? {
+                            ...comment,
+                            replies: comment.replies.filter(
+                                reply => reply._id !== tempId
+                            ),
+                            repliesCount: Math.max(
+                                0,
+                                (comment.repliesCount || 0) - 1
+                            )
+                        }
+                        : comment
+                )
+            );
+
+            setReplyInputs(prev => ({
+                ...prev,
+                [commentId]: replyText
+            }));
+
+            setActiveReply(commentId);
 
             alert(
                 error.response?.data?.message ||
@@ -140,10 +325,107 @@ function CommentDialog({ post, onClose, user }) {
 
 
     // Like / Unlike comment or reply
+    // const handleLike = async (commentId, replyId = null) => {
+    //     const targetId = replyId || commentId;
+
+    //     if (!targetId) return;
+
+    //     try {
+    //         const response = await API.put(
+    //             `/posts/comment/${targetId}/like`
+    //         );
+
+    //         const { liked, likesCount } = response.data;
+
+    //         setComments((prev) =>
+    //             prev.map((comment) => {
+    //                 // Reply like
+    //                 if (replyId && comment._id === commentId) {
+    //                     return {
+    //                         ...comment,
+    //                         replies: (comment.replies || []).map((reply) =>
+    //                             reply._id === replyId
+    //                                 ? { ...reply, isLiked: liked, likesCount }
+    //                                 : reply
+    //                         )
+    //                     };
+    //                 }
+
+    //                 // Normal comment like
+    //                 if (!replyId && comment._id === commentId) {
+    //                     return {
+    //                         ...comment,
+    //                         isLiked: liked,
+    //                         likesCount
+    //                     };
+    //                 }
+
+    //                 return comment;
+    //             })
+    //         );
+
+    //     } catch (error) {
+    //         console.error("Like error:", error);
+
+    //         alert(
+    //             error.response?.data?.message ||
+    //             "Unable to like. Please try again."
+    //         );
+    //     }
+    // };
+
+
     const handleLike = async (commentId, replyId = null) => {
         const targetId = replyId || commentId;
 
-        if (!targetId) return;
+        if (!targetId || pendingLikesRef.current.has(targetId)) return;
+
+        let previousLiked = false;
+        let previousCount = 0;
+
+        // Immediately update UI
+        setComments(prev =>
+            prev.map(comment => {
+                if (replyId && comment._id === commentId) {
+                    return {
+                        ...comment,
+                        replies: (comment.replies || []).map(reply => {
+                            if (reply._id !== replyId) return reply;
+
+                            previousLiked = Boolean(reply.isLiked);
+                            previousCount = reply.likesCount || 0;
+
+                            return {
+                                ...reply,
+                                isLiked: !previousLiked,
+                                likesCount: Math.max(
+                                    0,
+                                    previousCount + (previousLiked ? -1 : 1)
+                                )
+                            };
+                        })
+                    };
+                }
+
+                if (!replyId && comment._id === commentId) {
+                    previousLiked = Boolean(comment.isLiked);
+                    previousCount = comment.likesCount || 0;
+
+                    return {
+                        ...comment,
+                        isLiked: !previousLiked,
+                        likesCount: Math.max(
+                            0,
+                            previousCount + (previousLiked ? -1 : 1)
+                        )
+                    };
+                }
+
+                return comment;
+            })
+        );
+
+        pendingLikesRef.current.add(targetId);
 
         try {
             const response = await API.put(
@@ -152,13 +434,13 @@ function CommentDialog({ post, onClose, user }) {
 
             const { liked, likesCount } = response.data;
 
-            setComments((prev) =>
-                prev.map((comment) => {
-                    // Reply like
+            // Sync with backend response
+            setComments(prev =>
+                prev.map(comment => {
                     if (replyId && comment._id === commentId) {
                         return {
                             ...comment,
-                            replies: (comment.replies || []).map((reply) =>
+                            replies: (comment.replies || []).map(reply =>
                                 reply._id === replyId
                                     ? { ...reply, isLiked: liked, likesCount }
                                     : reply
@@ -166,7 +448,6 @@ function CommentDialog({ post, onClose, user }) {
                         };
                     }
 
-                    // Normal comment like
                     if (!replyId && comment._id === commentId) {
                         return {
                             ...comment,
@@ -182,10 +463,43 @@ function CommentDialog({ post, onClose, user }) {
         } catch (error) {
             console.error("Like error:", error);
 
+            // Rollback
+            setComments(prev =>
+                prev.map(comment => {
+                    if (replyId && comment._id === commentId) {
+                        return {
+                            ...comment,
+                            replies: (comment.replies || []).map(reply =>
+                                reply._id === replyId
+                                    ? {
+                                        ...reply,
+                                        isLiked: previousLiked,
+                                        likesCount: previousCount
+                                    }
+                                    : reply
+                            )
+                        };
+                    }
+
+                    if (!replyId && comment._id === commentId) {
+                        return {
+                            ...comment,
+                            isLiked: previousLiked,
+                            likesCount: previousCount
+                        };
+                    }
+
+                    return comment;
+                })
+            );
+
             alert(
                 error.response?.data?.message ||
                 "Unable to like. Please try again."
             );
+
+        } finally {
+            pendingLikesRef.current.delete(targetId);
         }
     };
 
@@ -193,7 +507,8 @@ function CommentDialog({ post, onClose, user }) {
 
     // Comment UI
     const renderComment = (comment) => {
-        const isLiked = likedComments.includes(comment._id);
+        // const isLiked = likedComments.includes(comment._id);
+        const isLiked = Boolean(comment.isLiked);
 
         return (
             <div key={comment._id} className="mb-4">
@@ -335,11 +650,12 @@ function CommentDialog({ post, onClose, user }) {
                                 }}
                             >
                                 {comment.replies.map((reply) => {
-                                    const replyLiked = likedComments.includes(reply.id);
+                                    // const replyLiked = likedComments.includes(reply.id);
+                                    const replyLiked = Boolean(reply.isLiked);
 
                                     return (
                                         <div
-                                            key={reply.id}
+                                            key={reply._id}
                                             className="d-flex gap-2 mb-3"
                                         >
                                             {reply.user?.image?.trim() ? (

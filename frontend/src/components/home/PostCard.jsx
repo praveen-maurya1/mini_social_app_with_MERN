@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import API from "../../services/api";
 import CommentDialog from "./CommentDialog";
 
 function PostCard({ post, user, onLikeUpdate }) {
-    const [liked, setLiked] = useState(false);
+    const [isLiking, setIsLiking] = useState(false);
+    const isLikingRef = useRef(false);
     const [bookmarked, setBookmarked] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [showShareDialog, setShowShareDialog] = useState(false);
@@ -22,30 +23,79 @@ function PostCard({ post, user, onLikeUpdate }) {
         }
     };
 
-    const likesCount = (post.likes?.length || 0) + (liked ? 1 : 0);
-    const commentsCount = post.comments?.length || 0;
+    const likesCount = post.likesCount ?? post.likes?.length ?? 0;
+    const commentsCount = post.commentsCount ?? post.comments?.length ?? 0;
+
+
+    // const handleLike = async () => {
+    //     try {
+    //         const response = await API.put(`/posts/${post._id}/like`);
+
+    //         onLikeUpdate(
+    //             post._id,
+    //             response.data.liked,
+    //             response.data.likes
+    //         );
+
+    //     } catch (error) {
+    //         console.error("Like post error:", error);
+
+    //         alert(
+    //             error.response?.data?.message ||
+    //             "Unable to like post. Please try again."
+    //         );
+    //     }
+    // };
 
 
     const handleLike = async () => {
+        if (isLikingRef.current) return;
+
+        const previousLiked = Boolean(post.isLiked);
+        const previousCount = post.likesCount ?? post.likes?.length ?? 0;
+
+        const newLiked = !previousLiked;
+        const newCount = Math.max(
+            0,
+            previousCount + (newLiked ? 1 : -1)
+        );
+
+        // Immediately update UI (Optimistic Update)
+        onLikeUpdate(post._id, newLiked, newCount);
+
+        isLikingRef.current = true;
+        setIsLiking(true);
+
         try {
             const response = await API.put(`/posts/${post._id}/like`);
 
+            // Sync with actual backend response
             onLikeUpdate(
                 post._id,
                 response.data.liked,
-                response.data.likes
+                response.data.likes ?? response.data.likesCount ?? newCount
             );
 
         } catch (error) {
             console.error("Like post error:", error);
 
+            // Rollback if API fails
+            onLikeUpdate(
+                post._id,
+                previousLiked,
+                previousCount
+            );
+
             alert(
                 error.response?.data?.message ||
                 "Unable to like post. Please try again."
             );
+
+        } finally {
+            isLikingRef.current = false;
+            setIsLiking(false);
         }
     };
-
 
     return (<>
         <article
@@ -208,7 +258,7 @@ function PostCard({ post, user, onLikeUpdate }) {
             >
                 {/* Like */}
 
-                <button
+                {/* <button
                     type="button"
                     className="btn border-0 d-flex align-items-center justify-content-center gap-2 flex-grow-1"
                     onClick={() => handleLike(post._id)}
@@ -221,6 +271,27 @@ function PostCard({ post, user, onLikeUpdate }) {
                     <i className={`bi ${post.isLiked ? "bi-heart-fill" : "bi-heart"}`} />
                     <span>Like</span>
                     <span>{post.likesCount ?? post.likes?.length ?? 0}</span>
+                </button> */}
+                <button
+                    type="button"
+                    className="btn border-0 d-flex align-items-center justify-content-center gap-2 flex-grow-1"
+                    onClick={handleLike}
+                    disabled={isLiking}
+                    style={{
+                        color: post.isLiked
+                            ? "var(--color-like)"
+                            : "var(--color-text-secondary)",
+                        transition: "color 0.15s ease"
+                    }}
+                >
+                    <i
+                        className={`bi ${post.isLiked ? "bi-heart-fill" : "bi-heart"
+                            }`}
+                    />
+
+                    <span>Like</span>
+
+                    <span>{likesCount}</span>
                 </button>
 
 
