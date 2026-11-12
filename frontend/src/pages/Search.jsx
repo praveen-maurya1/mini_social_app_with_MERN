@@ -292,7 +292,7 @@ function Search() {
                                             </p>
                                         </div>
                                     )}
-                                    {!hasResults ? (
+                                    {!searchLoading && !searchError && query && !hasResults ? (
                                         <div
                                             className="text-center py-5"
                                             style={{
