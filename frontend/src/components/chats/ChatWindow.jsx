@@ -265,9 +265,13 @@ function ChatWindow({ chat, user, socket, onBack }) {
 
     // Scroll to bottom
     const scrollToBottom = (behavior = "smooth") => {
-        bottomRef.current?.scrollIntoView({
-            behavior,
-            block: "end"
+        const container = messagesContainerRef.current;
+
+        if (!container) return;
+
+        container.scrollTo({
+            top: container.scrollHeight,
+            behavior
         });
     };
 
@@ -744,9 +748,11 @@ function ChatWindow({ chat, user, socket, onBack }) {
 
     return (
         <div
-            className="d-flex flex-column h-100"
+            className="d-flex flex-column h-100 overflow-hidden"
             style={{
-                backgroundColor: "var(--color-background)"
+                backgroundColor: "var(--color-background)",
+                minHeight: 0,
+                height: "100%",
             }}
         >
             {/* Chat Header */}
@@ -755,6 +761,7 @@ function ChatWindow({ chat, user, socket, onBack }) {
                 style={{
                     height: "72px",
                     flexShrink: 0,
+                    minWidth: 0,
                     backgroundColor: "var(--color-surface)",
                     borderBottom: "1px solid var(--color-border-light)"
                 }}
@@ -838,6 +845,11 @@ function ChatWindow({ chat, user, socket, onBack }) {
                 ref={messagesContainerRef}
                 onScroll={handleMessagesScroll}
                 className="flex-grow-1 overflow-auto p-3"
+                style={{
+                    minHeight: 0,
+                    overscrollBehavior: "contain",
+                    WebkitOverflowScrolling: "touch",
+                }}
             >
                 <div className="d-flex flex-column gap-3">
 
@@ -1017,10 +1029,11 @@ function ChatWindow({ chat, user, socket, onBack }) {
 
             {/* Message Composer */}
             <div
-                className="p-3"
+                className="p-3 flex-shrink-0"
                 style={{
                     backgroundColor: "var(--color-surface)",
-                    borderTop: "1px solid var(--color-border-light)"
+                    borderTop: "1px solid var(--color-border-light)",
+                    paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
                 }}
             >
                 <div className="d-flex align-items-center gap-2">
