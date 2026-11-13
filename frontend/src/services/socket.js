@@ -11,7 +11,12 @@ export const connectSocket = (token) => {
         return socket;
     }
 
-    socket = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:3000", {
+    // socket = io("http://localhost:3000", {
+    //     auth: { token },
+    //     transports: ["websocket"],
+    //     reconnection: true,
+    // });
+    socket = io(import.meta.env.VITE_SOCKET_URL, {
         auth: { token },
         transports: ["websocket"],
         reconnection: true,
