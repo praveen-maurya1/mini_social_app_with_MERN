@@ -100,16 +100,60 @@ function VerifyOtp() {
         location.state?.email ||
         sessionStorage.getItem("otpEmail");
 
+    // if (!email) {
+    //     return <Navigate to="/signup" replace />;
+    // }
+
+    // useEffect(() => {
+    //     showToast(
+    //         "Otp sent successfully to your email",
+    //         "success"
+    //     );
+    // }, []);
+    useEffect(() => {
+        if (email) {
+            showToast("OTP sent successfully to your email", "success");
+        }
+    }, [email, showToast]);
+
     if (!email) {
         return <Navigate to="/signup" replace />;
     }
 
-    useEffect(() => {
-        showToast(
-            "Otp sent successfully to your email",
-            "success"
-        );
-    }, []);
+    // const handleSubmit = async (e) => {
+    //     e.preventDefault();
+
+    //     try {
+    //         setLoading(true);
+
+    //         await API.post("/auth/verify-email", {
+    //             email,
+    //             otp,
+    //         });
+
+    //         sessionStorage.removeItem("otpEmail");
+
+    //         showToast(
+    //             res.data.message || "Email Verified",
+    //             "success"
+    //         );
+
+    //         navigate("/home", { replace: true });
+
+    //     } catch (error) {
+    //         // alert(
+    //         //     error.response?.data?.message ||
+    //         //     "OTP Verification Failed"
+    //         // );
+    //         showToast(
+    //             error.response?.data?.message || "OTP Verification Failed",
+    //             "error"
+    //         );
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -117,7 +161,7 @@ function VerifyOtp() {
         try {
             setLoading(true);
 
-            await API.post("/auth/verify-email", {
+            const res = await API.post("/auth/verify-email", {
                 email,
                 otp,
             });
@@ -125,16 +169,15 @@ function VerifyOtp() {
             sessionStorage.removeItem("otpEmail");
 
             showToast(
-                res.data.message || "Email Verified",
+                res.data.message || "Email Verified Successfully",
                 "success"
             );
 
-            navigate("/");
+            navigate("/", { replace: true });
+
         } catch (error) {
-            // alert(
-            //     error.response?.data?.message ||
-            //     "OTP Verification Failed"
-            // );
+            console.error("OTP Verification Error:", error);
+
             showToast(
                 error.response?.data?.message || "OTP Verification Failed",
                 "error"
@@ -143,6 +186,7 @@ function VerifyOtp() {
             setLoading(false);
         }
     };
+
 
     return (
         <div
