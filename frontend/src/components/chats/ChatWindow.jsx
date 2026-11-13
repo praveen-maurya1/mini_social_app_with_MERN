@@ -748,11 +748,12 @@ function ChatWindow({ chat, user, socket, onBack }) {
 
     return (
         <div
-            className="d-flex flex-column h-100 overflow-hidden"
+            className="d-flex flex-column overflow-hidden w-100"
             style={{
                 backgroundColor: "var(--color-background)",
-                minHeight: 0,
                 height: "100%",
+                minHeight: 0,
+                flex: 1,
             }}
         >
             {/* Chat Header */}

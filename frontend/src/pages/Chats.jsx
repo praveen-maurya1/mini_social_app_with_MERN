@@ -73,6 +73,10 @@ const formatConversation = (conversation) => {
 };
 
 function Chats() {
+
+    const [viewportHeight, setViewportHeight] = useState(
+        () => window.visualViewport?.height || window.innerHeight
+    );
     const [selectedChat, setSelectedChat] = useState(null);
     const [user, setUser] = useState(null);
 
@@ -98,7 +102,28 @@ function Chats() {
     useEffect(() => {
         fetchMe();
     }, []);
+    // Track visible viewport height when mobile keyboard opens/closes
+    useEffect(() => {
+        const viewport = window.visualViewport;
 
+        const updateViewportHeight = () => {
+            const height = viewport?.height || window.innerHeight;
+
+            setViewportHeight((previous) =>
+                Math.abs(previous - height) > 1 ? height : previous
+            );
+        };
+
+        updateViewportHeight();
+
+        window.addEventListener("resize", updateViewportHeight);
+        viewport?.addEventListener("resize", updateViewportHeight);
+
+        return () => {
+            window.removeEventListener("resize", updateViewportHeight);
+            viewport?.removeEventListener("resize", updateViewportHeight);
+        };
+    }, []);
     // Fetch first batch of conversations
     const fetchConversations = useCallback(async () => {
         try {
@@ -395,13 +420,17 @@ function Chats() {
     return (
         <div
             style={{
-                height: "100vh",
+                height: `${viewportHeight}px`,
+                minHeight: 0,
                 overflow: "hidden",
                 backgroundColor: "var(--color-background)",
                 color: "var(--color-text-primary)",
             }}
         >
-            <div className="d-flex h-100">
+            <div
+                className="d-flex h-100"
+                style={{ minHeight: 0 }}
+            >
 
                 {/* Desktop Sidebar */}
                 <div className="d-none d-lg-block flex-shrink-0">
@@ -409,21 +438,36 @@ function Chats() {
                 </div>
 
                 {/* Main Area */}
-                <div className="flex-grow-1 min-vw-0 d-flex flex-column h-100">
+                <div
+                    className="flex-grow-1 min-vw-0 d-flex flex-column h-100"
+                    style={{ minHeight: 0 }}
+                >
                     <Topbar />
 
-                    <div className="container-fluid flex-grow-1 p-0 overflow-hidden">
-                        <div className="row h-100 g-0">
-
+                    <div
+                        className="container-fluid flex-grow-1 p-0 overflow-hidden"
+                        style={{ minHeight: 0 }}
+                    >
+                        <div
+                            className="row h-100 g-0"
+                            style={{ minHeight: 0 }}
+                        >
                             {/* Chat Window */}
                             <main
                                 className={`col-12 col-lg-8 col-xl-8 h-100 ${selectedChat
                                     ? "d-flex"
                                     : "d-none d-lg-flex"
                                     }`}
+                                style={{ minHeight: 0 }}
                             >
                                 {selectedChat ? (
-                                    <div className="w-100 h-100">
+                                    <div
+                                        className="w-100 h-100"
+                                        style={{
+                                            minHeight: 0,
+                                            display: "flex"
+                                        }}
+                                    >
                                         <ChatWindow
                                             key={selectedChat._id}
                                             chat={selectedChat}
@@ -476,7 +520,6 @@ function Chats() {
                                     currentUserId={user?._id || user?.id}
                                 />
                             </aside>
-
                         </div>
                     </div>
                 </div>
