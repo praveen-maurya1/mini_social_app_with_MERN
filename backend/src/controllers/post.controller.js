@@ -2,6 +2,7 @@ import postModel from "../models/post.model.js";
 import commentModel from "../models/comments.model.js";
 import mongoose from "mongoose";
 import userModel from "../models/user.model.js";
+import followModel from "../models/follow.model.js";
 
 export async function createPost(req, res) {
     const { text, image } = req.body;
@@ -25,37 +26,6 @@ export async function createPost(req, res) {
     });
 }
 
-// export async function getAllPosts(req, res) {
-//     try {
-
-//         const page =
-//             Number(req.query.page) || 1;
-
-//         const limit = 10;
-
-//         const posts = await postModel
-//             .find()
-//             .sort({ createdAt: -1 })
-//             .skip((page - 1) * limit)
-//             .limit(limit);
-
-//         const totalPosts =
-//             await postModel.countDocuments();
-
-//         res.status(200).json({
-//             posts,
-//             hasMore:
-//                 page * limit < totalPosts
-//         });
-
-//     } catch (error) {
-
-//         res.status(500).json({
-//             message: error.message
-//         });
-
-//     }
-// }
 export async function getAllPosts(req, res) {
     try {
         const page = Math.max(Number(req.query.page) || 1, 1);
@@ -66,7 +36,10 @@ export async function getAllPosts(req, res) {
                 status: "active",
                 visibility: "public",
             })
-            .populate("userId", "username displayName firstName lastName image verified isPlatformVerified")
+            .populate(
+                "userId",
+                "username displayName firstName lastName image verified isPlatformVerified"
+            )
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
@@ -77,14 +50,79 @@ export async function getAllPosts(req, res) {
             visibility: "public",
         });
 
+        // Collect unique author IDs, excluding current user's own posts
+        const targetUserIds = [
+            ...new Set(
+                posts
+                    .filter(
+                        post =>
+                            post.userId &&
+                            post.userId._id.toString() !== req.user._id.toString()
+                    )
+                    .map(post => post.userId._id.toString())
+            )
+        ];
+
+        // Find mutual follow relationships in one database query
+        const mutualFollows = await followModel.find({
+            $or: [
+                {
+                    follower: req.user._id,
+                    following: { $in: targetUserIds }
+                },
+                {
+                    follower: { $in: targetUserIds },
+                    following: req.user._id
+                }
+            ]
+        }).select("follower following").lean();
+
+        // Build a set of users who are mutually following
+        const mutualFollowUsers = new Set();
+
+        const outgoingFollows = new Set();
+        const incomingFollows = new Set();
+
+        mutualFollows.forEach(follow => {
+            const followerId = follow.follower.toString();
+            const followingId = follow.following.toString();
+
+            if (followerId === req.user._id.toString()) {
+                outgoingFollows.add(followingId);
+            }
+
+            if (followingId === req.user._id.toString()) {
+                incomingFollows.add(followerId);
+            }
+        });
+
+        targetUserIds.forEach(userId => {
+            if (
+                outgoingFollows.has(userId) &&
+                incomingFollows.has(userId)
+            ) {
+                mutualFollowUsers.add(userId);
+            }
+        });
+
         const formattedPosts = posts.map(post => {
             const { userId, ...postData } = post;
 
+            const isOwnPost =
+                userId?._id?.toString() === req.user._id.toString();
+
             return {
                 ...postData,
+
                 isLiked: post.likes?.some(
-                    like => like.userId?.toString() === req.user._id.toString()
+                    like =>
+                        like.userId?.toString() === req.user._id.toString()
                 ) || false,
+
+                isMutualFollow: isOwnPost
+                    ? false
+                    : mutualFollowUsers.has(userId?._id?.toString()),
+
                 user: userId ? {
                     _id: userId._id,
                     username: userId.username,
@@ -122,84 +160,6 @@ export async function getAllPosts(req, res) {
     }
 }
 
-// export async function likePost(req, res) {
-//     try {
-
-//         const post =
-//             await postModel.findById(
-//                 req.params.id
-//             );
-
-//         if (!post) {
-
-//             return res.status(404)
-//                 .json({
-//                     message:
-//                         "Post not found"
-//                 });
-
-//         }
-
-//         const alreadyLiked =
-//             post.likes.find(
-//                 like =>
-//                     like.userId.toString()
-//                     === req.user.id
-//             );
-
-//         if (alreadyLiked) {
-
-//             post.likes =
-//                 post.likes.filter(
-//                     like =>
-//                         like.userId.toString()
-//                         !== req.user.id
-//                 );
-
-//             await post.save();
-
-//             return res.status(200)
-//                 .json({
-//                     message:
-//                         "Post unliked",
-//                     likes:
-//                         post.likes.length
-//                 });
-
-//         }
-
-//         post.likes.push({
-
-//             userId: req.user.id,
-
-//             username:
-//                 req.user.username
-
-//         });
-
-//         await post.save();
-
-//         res.status(200).json({
-
-//             message:
-//                 "Post liked",
-
-//             likes:
-//                 post.likes.length
-
-//         });
-
-//     } catch (error) {
-
-//         res.status(500).json({
-
-//             message:
-//                 error.message
-
-//         });
-
-//     }
-// }
 
 export async function likePost(req, res) {
     try {
@@ -280,7 +240,7 @@ export async function getComments(req, res) {
             })
             .populate(
                 "userId",
-                "username displayName firstName lastName image verified"
+                "username displayName firstName lastName image verified isPlatformVerified"
             )
             .populate(
                 "likes",
@@ -300,7 +260,7 @@ export async function getComments(req, res) {
             })
             .populate(
                 "userId",
-                "username displayName firstName lastName image verified"
+                "username displayName firstName lastName image verified isPlatformVerified"
             )
             .populate(
                 "likes",
@@ -324,6 +284,7 @@ export async function getComments(req, res) {
                     user.username,
                 image: user.image || "",
                 verified: user.verified || false,
+                isPlatformVerified: user.isPlatformVerified || false
             };
         };
 
@@ -378,8 +339,6 @@ export async function getComments(req, res) {
         });
     }
 }
-
-
 
 export async function addComment(req, res) {
     try {
@@ -441,6 +400,15 @@ export async function addComment(req, res) {
             replyToUsername: parent ? parent.username : ""
         });
 
+        // Populate user details including platform verification
+        const populatedComment = await commentModel
+            .findById(comment._id)
+            .populate(
+                "userId",
+                "username displayName firstName lastName image verified isPlatformVerified"
+            )
+            .lean();
+
         // Update post comments count
         post.commentsCount = (post.commentsCount || 0) + 1;
         await post.save();
@@ -451,11 +419,34 @@ export async function addComment(req, res) {
             await parent.save();
         }
 
+        // Format user details
+        const userData = populatedComment.userId;
+
+        const formattedComment = {
+            ...populatedComment,
+            user: userData
+                ? {
+                    _id: userData._id,
+                    username: userData.username,
+                    displayName:
+                        userData.displayName?.trim() ||
+                        [userData.firstName, userData.lastName]
+                            .filter(Boolean)
+                            .join(" ") ||
+                        userData.username,
+                    image: userData.image || "",
+                    verified: userData.verified || false,
+                    isPlatformVerified:
+                        userData.isPlatformVerified || false
+                }
+                : null
+        };
+
         return res.status(201).json({
             message: parent
                 ? "Reply added successfully"
                 : "Comment added successfully",
-            comment
+            comment: formattedComment
         });
 
     } catch (error) {
@@ -466,6 +457,7 @@ export async function addComment(req, res) {
         });
     }
 }
+
 
 
 export async function likeComment(req, res) {

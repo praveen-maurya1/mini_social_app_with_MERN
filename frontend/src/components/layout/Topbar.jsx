@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import { useTheme } from "../../context/ThemeContext";
 import API from "../../services/api";
+import { disconnectSocket } from "../../services/socket";
 
 function Topbar({ user }) {
     const navigate = useNavigate();
@@ -17,13 +18,18 @@ function Topbar({ user }) {
     const handleLogout = async () => {
         try {
             setUserlogout(true);
+
             await API.get("/auth/logout");
+
+            // Disconnect Socket.IO before clearing local data
+            disconnectSocket();
 
             localStorage.clear();
 
             navigate("/", {
                 replace: true
             });
+
         } catch (error) {
             console.log(error);
         } finally {
@@ -35,23 +41,7 @@ function Topbar({ user }) {
     const toggleTheme = () => {
         setMode(activeMode === "dark" ? "light" : "dark");
     };
-    // Close menu when clicking outside
-    // useEffect(() => {
-    //     const handleClickOutside = (event) => {
-    //         if (
-    //             profileMenuRef.current &&
-    //             !profileMenuRef.current.contains(event.target)
-    //         ) {
-    //             setShowProfileMenu(false);
-    //         }
-    //     };
-
-    //     document.addEventListener("mousedown", handleClickOutside);
-
-    //     return () => {
-    //         document.removeEventListener("mousedown", handleClickOutside);
-    //     };
-    // }, []);
+    
     return (
         <header
             style={{

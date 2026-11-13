@@ -1,20 +1,27 @@
 import { React, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import API from "../../services/api";
+import { disconnectSocket } from "../../services/socket";
 
 function Sidebar({ user }) {
     const [userlogout, setUserlogout] = useState(false);
     const navigate = useNavigate();
+
     const handleLogout = async () => {
         try {
             setUserlogout(true);
+
             await API.get("/auth/logout");
+
+            // Disconnect Socket.IO before clearing local data
+            disconnectSocket();
 
             localStorage.clear();
 
             navigate("/", {
                 replace: true
             });
+
         } catch (error) {
             console.log(error);
         } finally {

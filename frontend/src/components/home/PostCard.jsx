@@ -1,8 +1,10 @@
 import React, { useState, useRef } from "react";
 import API from "../../services/api";
 import CommentDialog from "./CommentDialog";
+import { useNavigate } from "react-router-dom";
 
 function PostCard({ post, user, onLikeUpdate }) {
+    const navigate = useNavigate();
     const [isLiking, setIsLiking] = useState(false);
     const isLikingRef = useRef(false);
     const [bookmarked, setBookmarked] = useState(false);
@@ -11,6 +13,93 @@ function PostCard({ post, user, onLikeUpdate }) {
     const [copied, setCopied] = useState(false);
 
     const postUrl = `${window.location.origin}/post/${post._id}`;
+
+
+    const [showMoreMenu, setShowMoreMenu] = useState(false);
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [followLoading, setFollowLoading] = useState(false);
+    const [followStatusLoading, setFollowStatusLoading] = useState(false);
+
+
+    const targetUserId =
+        post.user?._id ||
+        post.userId?._id ||
+        post.userId;
+
+    const isOwnPost =
+        user?._id &&
+        targetUserId &&
+        user._id.toString() === targetUserId.toString();
+
+    const handleMoreMenu = async () => {
+        const nextState = !showMoreMenu;
+        setShowMoreMenu(nextState);
+
+        if (!nextState || !targetUserId || isOwnPost) return;
+
+        try {
+            setFollowStatusLoading(true);
+
+            const response = await API.get(
+                `/follows/${targetUserId}/status`
+            );
+
+            setIsFollowing(response.data.isFollowing);
+        } catch (error) {
+            console.error("Follow status error:", error);
+        } finally {
+            setFollowStatusLoading(false);
+        }
+    };
+    const handleStartChat = async () => {
+        try {
+            const response = await API.post(
+                `/conversations/${targetUserId}`
+            );
+
+            const conversation = response.data.conversation;
+
+            setShowMoreMenu(false);
+
+            navigate("/chats", {
+                state: {
+                    conversation
+                }
+            });
+
+        } catch (error) {
+            console.error(
+                "Unable to start conversation:",
+                error.response?.data || error
+            );
+        }
+    };
+    const handleFollowToggle = async () => {
+        if (!targetUserId || followLoading) return;
+
+        try {
+            setFollowLoading(true);
+
+            if (isFollowing) {
+                await API.delete(`/follows/${targetUserId}`);
+                setIsFollowing(false);
+            } else {
+                await API.post(`/follows/${targetUserId}`);
+                setIsFollowing(true);
+            }
+
+            setShowMoreMenu(false);
+        } catch (error) {
+            console.error("Follow action error:", error);
+
+            alert(
+                error.response?.data?.message ||
+                "Unable to update follow status."
+            );
+        } finally {
+            setFollowLoading(false);
+        }
+    };
 
     const handleCopyLink = async () => {
         try {
@@ -25,29 +114,6 @@ function PostCard({ post, user, onLikeUpdate }) {
 
     const likesCount = post.likesCount ?? post.likes?.length ?? 0;
     const commentsCount = post.commentsCount ?? post.comments?.length ?? 0;
-
-
-    // const handleLike = async () => {
-    //     try {
-    //         const response = await API.put(`/posts/${post._id}/like`);
-
-    //         onLikeUpdate(
-    //             post._id,
-    //             response.data.liked,
-    //             response.data.likes
-    //         );
-
-    //     } catch (error) {
-    //         console.error("Like post error:", error);
-
-    //         alert(
-    //             error.response?.data?.message ||
-    //             "Unable to like post. Please try again."
-    //         );
-    //     }
-    // };
-
-
     const handleLike = async () => {
         if (isLikingRef.current) return;
 
@@ -171,16 +237,153 @@ function PostCard({ post, user, onLikeUpdate }) {
                     </div>
                 </div>
 
-                {/* More */}
-                <button
-                    type="button"
-                    className="btn p-1 border-0"
-                    style={{
-                        color: "var(--color-text-muted)",
-                    }}
-                >
-                    <i className="bi bi-three-dots fs-5" />
-                </button>
+                {/* More Dropdown */}
+                {/* {!isOwnPost && targetUserId && (
+                    <div className="position-relative">
+                        <button
+                            type="button"
+                            className="btn p-1 border-0"
+                            onClick={handleMoreMenu}
+                            style={{
+                                color: "var(--color-text-muted)",
+                            }}
+                        >
+                            <i className="bi bi-three-dots fs-5" />
+                        </button>
+
+                        {showMoreMenu && (
+                            <div
+                                className="position-absolute end-0"
+                                style={{
+                                    top: "100%",
+                                    marginTop: "6px",
+                                    zIndex: 1050,
+                                    width: "160px",
+                                    background: "var(--color-surface)",
+                                    border: "1px solid var(--color-border)",
+                                    borderRadius: "var(--radius-md)",
+                                    boxShadow: "var(--shadow-lg)",
+                                    overflow: "hidden",
+                                }}
+                            >
+                                <button
+                                    type="button"
+                                    className="btn w-100 d-flex align-items-center gap-2 text-start border-0 rounded-0 px-3 py-2"
+                                    onClick={handleFollowToggle}
+                                    disabled={followLoading || followStatusLoading}
+                                    style={{
+                                        color: "var(--color-text-primary)",
+                                        backgroundColor: "transparent",
+                                        fontSize: "14px",
+                                    }}
+                                >
+                                    <i
+                                        className={`bi ${isFollowing
+                                                ? "bi-person-dash"
+                                                : "bi-person-plus"
+                                            }`}
+                                    />
+
+                                    {followStatusLoading
+                                        ? "Loading..."
+                                        : followLoading
+                                            ? "Please wait..."
+                                            : isFollowing
+                                                ? "Unfollow"
+                                                : "Follow"}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )} */}
+
+
+                {!isOwnPost && targetUserId && (
+                    <div className="position-relative">
+                        <button
+                            type="button"
+                            className="btn p-1 border-0"
+                            onClick={handleMoreMenu}
+                            style={{
+                                color: "var(--color-text-muted)",
+                            }}
+                        >
+                            <i className="bi bi-three-dots fs-5" />
+                        </button>
+
+                        {showMoreMenu && (
+                            <div
+                                className="position-absolute end-0"
+                                style={{
+                                    top: "100%",
+                                    marginTop: "6px",
+                                    zIndex: 1050,
+                                    width: "180px",
+                                    background: "var(--color-surface)",
+                                    border: "1px solid var(--color-border)",
+                                    borderRadius: "var(--radius-md)",
+                                    boxShadow: "var(--shadow-lg)",
+                                    overflow: "hidden",
+                                }}
+                            >
+                                {/* Follow / Unfollow */}
+                                <button
+                                    type="button"
+                                    className="btn w-100 d-flex align-items-center gap-2 text-start border-0 rounded-0 px-3 py-2"
+                                    onClick={handleFollowToggle}
+                                    disabled={followLoading || followStatusLoading}
+                                    style={{
+                                        color: "var(--color-text-primary)",
+                                        backgroundColor: "transparent",
+                                        fontSize: "14px",
+                                    }}
+                                >
+                                    <i
+                                        className={`bi ${isFollowing
+                                            ? "bi-person-dash"
+                                            : "bi-person-plus"
+                                            }`}
+                                    />
+
+                                    {followStatusLoading
+                                        ? "Loading..."
+                                        : followLoading
+                                            ? "Please wait..."
+                                            : isFollowing
+                                                ? "Unfollow"
+                                                : "Follow"}
+                                </button>
+
+                                {/* Message - Only for mutual followers */}
+                                {post.isMutualFollow && (
+                                    <>
+                                        <div
+                                            style={{
+                                                borderTop: "1px solid var(--color-border)",
+                                            }}
+                                        />
+
+                                        <button
+                                            type="button"
+                                            className="btn w-100 d-flex align-items-center gap-2 text-start border-0 rounded-0 px-3 py-2"
+                                            onClick={handleStartChat}
+                                            style={{
+                                                color: "var(--color-text-primary)",
+                                                backgroundColor: "transparent",
+                                                fontSize: "14px",
+                                            }}
+                                        >
+                                            <i className="bi bi-chat-dots" />
+                                            Message
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+
             </div>
 
             {/* =========================
@@ -258,20 +461,7 @@ function PostCard({ post, user, onLikeUpdate }) {
             >
                 {/* Like */}
 
-                {/* <button
-                    type="button"
-                    className="btn border-0 d-flex align-items-center justify-content-center gap-2 flex-grow-1"
-                    onClick={() => handleLike(post._id)}
-                    style={{
-                        color: post.isLiked
-                            ? "var(--color-like)"
-                            : "var(--color-text-secondary)",
-                    }}
-                >
-                    <i className={`bi ${post.isLiked ? "bi-heart-fill" : "bi-heart"}`} />
-                    <span>Like</span>
-                    <span>{post.likesCount ?? post.likes?.length ?? 0}</span>
-                </button> */}
+
                 <button
                     type="button"
                     className="btn border-0 d-flex align-items-center justify-content-center gap-2 flex-grow-1"
@@ -296,18 +486,6 @@ function PostCard({ post, user, onLikeUpdate }) {
 
 
 
-                {/* Comment */}
-                {/* <button
-                    type="button"
-                    className="btn border-0 d-flex align-items-center justify-content-center gap-2 flex-grow-1"
-                    style={{
-                        color: "var(--color-text-secondary)",
-                    }}
-                >
-                    <i className="bi bi-chat" />
-
-                    <span>Comment</span>
-                </button> */}
                 {/* Comment */}
                 <button
                     type="button"
@@ -356,10 +534,6 @@ function PostCard({ post, user, onLikeUpdate }) {
         </article>
 
         {showComments && (
-            // <CommentDialog
-            //     post={post}
-            //     onClose={() => setShowComments(false)}
-            // />
             <CommentDialog
                 post={post}
                 onClose={() => setShowComments(false)}

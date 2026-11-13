@@ -7,7 +7,6 @@ function CommentDialog({ post, onClose, user }) {
     const [newComment, setNewComment] = useState("");
     const [replyInputs, setReplyInputs] = useState({});
     const [activeReply, setActiveReply] = useState(null);
-    // const [likedComments, setLikedComments] = useState([]);
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -38,41 +37,6 @@ function CommentDialog({ post, onClose, user }) {
     };
     // Add new comment
 
-    // const handleAddComment = async () => {
-    //     if (!newComment.trim()) return;
-
-    //     try {
-    //         const response = await API.post(`/posts/${post._id}/comment`, {
-    //             text: newComment.trim()
-    //         });
-
-    //         const comment = response.data.comment;
-
-    //         // Add newly created comment to the list
-    //         setComments((prev) => [...prev, {
-    //             ...comment,
-    //             user: {
-    //                 _id: comment.userId,
-    //                 username: comment.username,
-    //                 displayName: user?.displayName || user?.username || comment.username,
-    //                 image: comment.userImage || ""
-    //             },
-    //             likes: [],
-    //             likesCount: 0,
-    //             replies: []
-    //         }]);
-
-    //         setNewComment("");
-
-    //     } catch (error) {
-    //         console.error("Add comment error:", error);
-
-    //         alert(
-    //             error.response?.data?.message ||
-    //             "Unable to add comment. Please try again."
-    //         );
-    //     }
-    // };
 
     const handleAddComment = async () => {
         const text = newComment.trim();
@@ -112,15 +76,16 @@ function CommentDialog({ post, onClose, user }) {
             const formattedComment = {
                 ...comment,
                 isLiked: false,
-                user: {
-                    _id: comment.userId,
+                user: comment.user || {
+                    _id: user?._id,
                     username: comment.username,
-                    displayName: user?.displayName || user?.username || comment.username,
-                    image: comment.userImage || ""
+                    displayName: user?.displayName || comment.username,
+                    image: comment.userImage || "",
+                    isPlatformVerified: user?.isPlatformVerified || false,
                 },
-                likes: [],
-                likesCount: 0,
-                replies: []
+                likes: comment.likes || [],
+                likesCount: comment.likesCount || 0,
+                replies: comment.replies || [],
             };
 
             // Replace temporary comment with actual backend comment
@@ -149,63 +114,6 @@ function CommentDialog({ post, onClose, user }) {
 
 
     // Add reply
-
-    // const handleAddReply = async (commentId) => {
-    //     const replyText = replyInputs[commentId]?.trim();
-
-    //     if (!replyText) return;
-
-    //     try {
-    //         const response = await API.post(`/posts/${post._id}/comment`, {
-    //             text: replyText,
-    //             parentComment: commentId
-    //         });
-
-    //         const reply = response.data.comment;
-
-    //         const formattedReply = {
-    //             ...reply,
-    //             user: {
-    //                 _id: reply.userId,
-    //                 username: reply.username,
-    //                 displayName: user?.displayName || user?.username || reply.username,
-    //                 image: reply.userImage || ""
-    //             },
-    //             likes: [],
-    //             likesCount: 0
-    //         };
-
-    //         setComments((prev) =>
-    //             prev.map((comment) =>
-    //                 comment._id === commentId
-    //                     ? {
-    //                         ...comment,
-    //                         replies: [
-    //                             ...(comment.replies || []),
-    //                             formattedReply
-    //                         ],
-    //                         repliesCount: (comment.repliesCount || 0) + 1
-    //                     }
-    //                     : comment
-    //             )
-    //         );
-
-    //         setReplyInputs((prev) => ({
-    //             ...prev,
-    //             [commentId]: ""
-    //         }));
-
-    //         setActiveReply(null);
-
-    //     } catch (error) {
-    //         console.error("Add reply error:", error);
-
-    //         alert(
-    //             error.response?.data?.message ||
-    //             "Unable to add reply. Please try again."
-    //         );
-    //     }
-    // };
 
     const handleAddReply = async (commentId) => {
         const replyText = replyInputs[commentId]?.trim();
@@ -257,17 +165,19 @@ function CommentDialog({ post, onClose, user }) {
 
             const reply = response.data.comment;
 
+
             const formattedReply = {
                 ...reply,
                 isLiked: false,
-                user: {
-                    _id: reply.userId,
+                user: reply.user || {
+                    _id: user?._id,
                     username: reply.username,
-                    displayName: user?.displayName || user?.username || reply.username,
-                    image: reply.userImage || ""
+                    displayName: user?.displayName || reply.username,
+                    image: reply.userImage || "",
+                    isPlatformVerified: user?.isPlatformVerified || false,
                 },
-                likes: [],
-                likesCount: 0
+                likes: reply.likes || [],
+                likesCount: reply.likesCount || 0,
             };
 
             // Replace temporary reply with actual backend reply
@@ -320,60 +230,9 @@ function CommentDialog({ post, onClose, user }) {
     };
 
 
-    // Like comment or reply
-
 
 
     // Like / Unlike comment or reply
-    // const handleLike = async (commentId, replyId = null) => {
-    //     const targetId = replyId || commentId;
-
-    //     if (!targetId) return;
-
-    //     try {
-    //         const response = await API.put(
-    //             `/posts/comment/${targetId}/like`
-    //         );
-
-    //         const { liked, likesCount } = response.data;
-
-    //         setComments((prev) =>
-    //             prev.map((comment) => {
-    //                 // Reply like
-    //                 if (replyId && comment._id === commentId) {
-    //                     return {
-    //                         ...comment,
-    //                         replies: (comment.replies || []).map((reply) =>
-    //                             reply._id === replyId
-    //                                 ? { ...reply, isLiked: liked, likesCount }
-    //                                 : reply
-    //                         )
-    //                     };
-    //                 }
-
-    //                 // Normal comment like
-    //                 if (!replyId && comment._id === commentId) {
-    //                     return {
-    //                         ...comment,
-    //                         isLiked: liked,
-    //                         likesCount
-    //                     };
-    //                 }
-
-    //                 return comment;
-    //             })
-    //         );
-
-    //     } catch (error) {
-    //         console.error("Like error:", error);
-
-    //         alert(
-    //             error.response?.data?.message ||
-    //             "Unable to like. Please try again."
-    //         );
-    //     }
-    // };
-
 
     const handleLike = async (commentId, replyId = null) => {
         const targetId = replyId || commentId;
@@ -545,10 +404,20 @@ function CommentDialog({ post, onClose, user }) {
                             }}
                         >
                             <div
-                                className="fw-semibold small mb-1"
+                                className="fw-semibold small mb-1 d-flex align-items-center"
                                 style={{ color: "var(--color-text-primary)" }}
                             >
-                                {comment.user?.displayName || comment.user?.username || "User"}
+                                <span>
+                                    {comment.user?.displayName || comment.user?.username || "User"}
+                                </span>
+
+                                {comment.user?.isPlatformVerified && (
+                                    <i
+                                        className="bi bi-patch-check-fill ms-1"
+                                        style={{ color: "var(--color-primary)" }}
+                                        title="Verified account"
+                                    />
+                                )}
                             </div>
 
                             <div
@@ -582,8 +451,6 @@ function CommentDialog({ post, onClose, user }) {
                                 onClick={() => handleLike(comment._id)}
                             >
                                 {isLiked ? "Liked" : "Like"}
-                                {/* {comment.likes?.length + (isLiked ? 1 : 0) > 0 &&
-                                    ` (${(comment.likes?.length || 0) + (isLiked ? 1 : 0)})`} */}
                                 {comment.likesCount > 0 && ` (${comment.likesCount})`}
                             </button>
 
@@ -689,13 +556,31 @@ function CommentDialog({ post, onClose, user }) {
                                                         borderRadius: "var(--radius-lg)",
                                                     }}
                                                 >
-                                                    <div
+                                                    {/* <div
                                                         className="fw-semibold small mb-1"
                                                         style={{
                                                             color: "var(--color-text-primary)",
                                                         }}
                                                     >
                                                         {reply.username}
+                                                    </div> */}
+                                                    <div
+                                                        className="fw-semibold small mb-1 d-flex align-items-center"
+                                                        style={{
+                                                            color: "var(--color-text-primary)",
+                                                        }}
+                                                    >
+                                                        <span>
+                                                            {reply.user?.displayName || reply.user?.username || reply.username || "User"}
+                                                        </span>
+
+                                                        {reply.user?.isPlatformVerified && (
+                                                            <i
+                                                                className="bi bi-patch-check-fill ms-1"
+                                                                style={{ color: "var(--color-primary)" }}
+                                                                title="Verified account"
+                                                            />
+                                                        )}
                                                     </div>
 
                                                     <div
@@ -791,29 +676,6 @@ function CommentDialog({ post, onClose, user }) {
                         <i className="bi bi-x-lg fs-5" />
                     </button>
                 </div>
-
-                {/* Comments List */}
-                {/* <div className="flex-grow-1 overflow-auto p-3">
-                    {comments.length > 0 ? (
-                        comments.map((comment) => renderComment(comment))
-                    ) : (
-                        <div className="text-center py-5">
-                            <i
-                                className="bi bi-chat-square-text fs-1"
-                                style={{ color: "var(--color-text-muted)" }}
-                            />
-                            <p
-                                className="mt-3 mb-1 fw-semibold"
-                                style={{ color: "var(--color-text-primary)" }}
-                            >
-                                No comments yet
-                            </p>
-                            <small style={{ color: "var(--color-text-muted)" }}>
-                                Be the first to comment on this post.
-                            </small>
-                        </div>
-                    )}
-                </div> */}
                 {/* Comments List */}
                 <div className="flex-grow-1 overflow-auto p-3">
                     {loading ? (

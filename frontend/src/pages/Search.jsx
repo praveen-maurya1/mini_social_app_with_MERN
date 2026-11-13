@@ -17,6 +17,9 @@ function Search() {
     const [searchLoading, setSearchLoading] = useState(false);
     const [searchError, setSearchError] = useState("");
 
+    const [followStatus, setFollowStatus] = useState({});
+    const [followLoading, setFollowLoading] = useState({});
+
     const query = searchQuery.trim().toLowerCase();
 
     const filteredUsers = users;
@@ -42,10 +45,92 @@ function Search() {
             console.log(error);
         }
     };
+    const currentUserId = JSON.parse(
+        localStorage.getItem("user") || "{}"
+    )?._id;
+
+    const handleFollowToggle = async (targetUserId) => {
+        if (!targetUserId || followLoading[targetUserId]) return;
+
+        try {
+            setFollowLoading(prev => ({
+                ...prev,
+                [targetUserId]: true,
+            }));
+
+            if (followStatus[targetUserId]) {
+                await API.delete(`/follows/${targetUserId}`);
+
+                setFollowStatus(prev => ({
+                    ...prev,
+                    [targetUserId]: false,
+                }));
+            } else {
+                await API.post(`/follows/${targetUserId}`);
+
+                setFollowStatus(prev => ({
+                    ...prev,
+                    [targetUserId]: true,
+                }));
+            }
+        } catch (error) {
+            console.error("Follow toggle error:", error);
+
+            alert(
+                error.response?.data?.message ||
+                "Unable to update follow status."
+            );
+        } finally {
+            setFollowLoading(prev => ({
+                ...prev,
+                [targetUserId]: false,
+            }));
+        }
+    };
     useEffect(() => {
         fetchMe();
     }, []);
+    useEffect(() => {
+        let isMounted = true;
 
+        const fetchFollowStatuses = async () => {
+            if (!users.length) {
+                setFollowStatus({});
+                return;
+            }
+
+            try {
+                const results = await Promise.all(
+                    users.map(async (person) => {
+                        try {
+                            const response = await API.get(
+                                `/follows/${person._id}/status`
+                            );
+
+                            return [
+                                person._id,
+                                response.data.isFollowing
+                            ];
+                        } catch {
+                            return [person._id, false];
+                        }
+                    })
+                );
+
+                if (isMounted) {
+                    setFollowStatus(Object.fromEntries(results));
+                }
+            } catch (error) {
+                console.error("Follow status fetch error:", error);
+            }
+        };
+
+        fetchFollowStatuses();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [users]);
     useEffect(() => {
         if (!query) {
             setUsers([]);
@@ -346,16 +431,6 @@ function Search() {
                                                                 key={user._id}
                                                                 className="d-flex align-items-center gap-3 py-2"
                                                             >
-                                                                {/* <img
-                                                                    src={user.image}
-                                                                    alt={user.displayName || user.username}
-                                                                    width="46"
-                                                                    height="46"
-                                                                    className="rounded-circle"
-                                                                    style={{
-                                                                        objectFit: "cover",
-                                                                    }}
-                                                                /> */}
                                                                 {user.user?.image || user.userImage ? (
                                                                     <img
                                                                         src={user.user?.image || user.userImage}
@@ -404,18 +479,34 @@ function Search() {
                                                                     </small>
                                                                 </div>
 
-                                                                <button
-                                                                    type="button"
-                                                                    className="btn btn-sm px-3"
-                                                                    style={{
-                                                                        backgroundColor: "var(--color-primary-light)",
-                                                                        color: "var(--color-primary)",
-                                                                        borderRadius: "var(--radius-pill)",
-                                                                        fontWeight: 600,
-                                                                    }}
-                                                                >
-                                                                    Follow
-                                                                </button>
+                                                                {currentUserId !== user._id && (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="btn btn-sm px-3"
+                                                                        onClick={() => handleFollowToggle(user._id)}
+                                                                        disabled={
+                                                                            followLoading[user._id] ||
+                                                                            followStatus[user._id] === undefined
+                                                                        }
+                                                                        style={{
+                                                                            backgroundColor: followStatus[user._id]
+                                                                                ? "var(--color-surface-secondary)"
+                                                                                : "var(--color-primary-light)",
+                                                                            color: followStatus[user._id]
+                                                                                ? "var(--color-text-secondary)"
+                                                                                : "var(--color-primary)",
+                                                                            borderRadius: "var(--radius-pill)",
+                                                                            fontWeight: 600,
+                                                                            border: "none",
+                                                                        }}
+                                                                    >
+                                                                        {followLoading[user._id]
+                                                                            ? "Please wait..."
+                                                                            : followStatus[user._id]
+                                                                                ? "Following"
+                                                                                : "Follow"}
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         ))}
                                                     </div>
@@ -423,55 +514,6 @@ function Search() {
                                             )}
 
                                             {/* Posts */}
-                                            {/* {showPosts && filteredPosts.length > 0 && (
-                                                <section className="mb-4">
-                                                    <h6 className="fw-bold mb-3">
-                                                        Posts
-                                                    </h6>
-
-                                                    <div className="d-flex flex-column gap-3">
-                                                        {filteredPosts.map((post) => (
-                                                            <div
-                                                                key={post.id || post._id}
-                                                                className="p-3"
-                                                                style={{
-                                                                    backgroundColor: "var(--color-surface)",
-                                                                    border: "1px solid var(--color-border)",
-                                                                    borderRadius: "var(--radius-lg)",
-                                                                }}
-                                                            >
-                                                                <div className="d-flex align-items-center gap-2 mb-2">
-                                                                  
-                                                                    {post.image && (
-                                                                        <img
-                                                                            src={post.image}
-                                                                            alt="Post"
-                                                                            className="w-100 rounded-3 mt-2 mb-2"
-                                                                            style={{
-                                                                                maxHeight: "350px",
-                                                                                objectFit: "cover"
-                                                                            }}
-                                                                        />
-                                                                    )}
-                                                                    <span className="fw-semibold">
-                                                                        {post.user?.displayName || post.user?.username || post.username}
-                                                                    </span>
-                                                                </div>
-
-                                                                <p
-                                                                    className="mb-0"
-                                                                    style={{
-                                                                        color: "var(--color-text-secondary)",
-                                                                        fontSize: "14px",
-                                                                    }}
-                                                                >
-                                                                    {post.text}
-                                                                </p>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </section>
-                                            )} */}
 
                                             {showPosts && filteredPosts.length > 0 && (
                                                 <section className="mb-4">
@@ -542,31 +584,6 @@ function Search() {
                                                                         </small>
                                                                     </div>
                                                                 </div>
-
-                                                                {/* <div className="flex-grow-1 overflow-hidden">
-                                                                    <div className="d-flex align-items-center gap-1">
-                                                                        <span className="fw-semibold text-truncate">
-                                                                            {user.displayName || user.username}
-                                                                        </span>
-
-                                                                        {user.isPlatformVerified && (
-                                                                            <i
-                                                                                className="bi bi-patch-check-fill"
-                                                                                style={{
-                                                                                    color: "var(--color-primary)",
-                                                                                }}
-                                                                            />
-                                                                        )}
-                                                                    </div>
-
-                                                                    <small
-                                                                        style={{
-                                                                            color: "var(--color-text-muted)",
-                                                                        }}
-                                                                    >
-                                                                        @{user.username}
-                                                                    </small>
-                                                                </div> */}
 
                                                                 {/* Post Image */}
 
@@ -687,14 +704,3 @@ function Search() {
 }
 
 export default Search;
-
-
-
-
-// import ComingSoon from "../components/commonModule/CommingSoon";
-
-// function Search() {
-//     return <ComingSoon title="Search" />;
-// }
-
-// export default Search;
