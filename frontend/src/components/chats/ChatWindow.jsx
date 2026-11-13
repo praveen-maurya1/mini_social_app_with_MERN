@@ -5,7 +5,12 @@ import React, {
     useCallback,
     useLayoutEffect
 } from "react";
-
+import {
+    savePendingMessage,
+    getPendingMessages,
+    updatePendingMessage,
+    flushMessageOutbox
+} from "../../services/messageOutbox";
 import API from "../../services/api";
 
 function ChatWindow({ chat, user, socket, onBack }) {
@@ -26,6 +31,8 @@ function ChatWindow({ chat, user, socket, onBack }) {
     const bottomRef = useRef(null);
     const preserveScrollRef = useRef(null);
     const loadingOlderRef = useRef(false);
+    const messageInputRef = useRef(null);
+    const pendingSendsRef = useRef(0);
 
     const conversationId = chat?._id;
     // Stop typing indicator
@@ -176,15 +183,20 @@ function ChatWindow({ chat, user, socket, onBack }) {
     const addMessage = (newMessage) => {
         const formatted = formatMessage(newMessage);
 
-        setMessages((previous) => {
-            const alreadyExists = previous.some((item) => {
-                return (
-                    (formatted._id && item._id === formatted._id) ||
-                    (formatted.id && item.id === formatted.id)
-                );
-            });
+        setMessages(previous => {
+            const existingIndex = previous.findIndex(item =>
+                (formatted._id && item._id === formatted._id) ||
+                (formatted.clientMessageId &&
+                    item.clientMessageId === formatted.clientMessageId)
+            );
 
-            if (alreadyExists) return previous;
+            if (existingIndex !== -1) {
+                return previous.map((item, index) =>
+                    index === existingIndex
+                        ? { ...item, ...formatted }
+                        : item
+                );
+            }
 
             return [...previous, formatted];
         });
@@ -564,6 +576,45 @@ function ChatWindow({ chat, user, socket, onBack }) {
         };
     }, [socket, conversationId]);
 
+    useEffect(() => {
+        const handleOutboxSent = (event) => {
+            const { clientMessageId, message: savedMessage } = event.detail || {};
+
+            if (!clientMessageId || !savedMessage) return;
+
+            const formatted = formatMessage(savedMessage);
+
+            setMessages(previous =>
+                previous.map(item =>
+                    item.clientMessageId === clientMessageId
+                        ? formatted
+                        : item
+                )
+            );
+        };
+
+        const handleOutboxFailed = (event) => {
+            const { clientMessageId } = event.detail || {};
+
+            if (!clientMessageId) return;
+
+            setMessages(previous =>
+                previous.map(item =>
+                    item.clientMessageId === clientMessageId
+                        ? { ...item, status: "failed" }
+                        : item
+                )
+            );
+        };
+
+        window.addEventListener("outbox:sent", handleOutboxSent);
+        window.addEventListener("outbox:failed", handleOutboxFailed);
+
+        return () => {
+            window.removeEventListener("outbox:sent", handleOutboxSent);
+            window.removeEventListener("outbox:failed", handleOutboxFailed);
+        };
+    }, []);
 
     useEffect(() => {
         if (!socket || !conversationId) return;
@@ -657,94 +708,83 @@ function ChatWindow({ chat, user, socket, onBack }) {
     const sendMessage = async () => {
         const trimmedMessage = message.trim();
 
-        if (!trimmedMessage || sending || !conversationId) return;
+        if (!trimmedMessage || !conversationId || !currentUserId) return;
 
-        const temporaryId = `temp-${Date.now()}`;
+        const clientMessageId = crypto.randomUUID();
+        const createdAt = new Date().toISOString();
 
         const optimisticMessage = {
-            id: temporaryId,
-            _id: temporaryId,
-            senderId: currentUserId?.toString(),
+            id: clientMessageId,
+            _id: clientMessageId,
+            clientMessageId,
+            senderId: currentUserId.toString(),
             text: trimmedMessage,
-            createdAt: new Date().toISOString(),
-            time: formatTime(new Date()),
+            createdAt,
+            time: formatTime(createdAt),
             status: "sending"
         };
 
-        setMessages((previous) => [
-            ...previous,
-            optimisticMessage
-        ]);
-        stopTyping();
-        setMessage("");
-        setSending(true);
-        setError("");
-
-        setTimeout(() => scrollToBottom(), 50);
+        const pendingMessage = {
+            clientMessageId,
+            userId: currentUserId.toString(),
+            conversationId: conversationId.toString(),
+            text: trimmedMessage,
+            createdAt,
+            status: "queued",
+            attempts: 0
+        };
 
         try {
-            const response = await API.post(
-                `/messages/${conversationId}`,
-                {
-                    text: trimmedMessage
-                }
-            );
+            // Persist first. Never send before this succeeds.
+            await savePendingMessage(pendingMessage);
 
+            setMessages(previous => [...previous, optimisticMessage]);
+            setMessage("");
+            setError("");
+            stopTyping();
 
-            // const savedMessage = response.data.message;
-            const savedMessage = response.data.data;
+            setTimeout(() => scrollToBottom(), 50);
 
-            // Only format if backend actually returned a message object
-            if (savedMessage && typeof savedMessage === "object") {
-                const formattedMessage = formatMessage(savedMessage);
-
-                setMessages((previous) =>
-                    previous.map((item) =>
-                        item.id === temporaryId
-                            ? formattedMessage
-                            : item
-                    )
-                );
-            } else {
-                // Keep optimistic message instead of replacing it with a string
-                setMessages((previous) =>
-                    previous.map((item) =>
-                        item.id === temporaryId
-                            ? { ...item, status: "sent" }
-                            : item
-                    )
-                );
-            }
+            // API sending continues independently of the input
+            flushMessageOutbox(currentUserId.toString());
 
         } catch (err) {
-            console.error("Send message error:", err);
+            console.error("Unable to save message locally:", err);
 
-            setMessages((previous) =>
-                previous.map((item) =>
-                    item.id === temporaryId
-                        ? { ...item, status: "failed" }
+            setError(
+                "Message could not be saved on this device. Please try again."
+            );
+        }
+    };
+
+    const retryMessage = async (failedMessage) => {
+        const clientMessageId = failedMessage.clientMessageId;
+
+        if (!clientMessageId) return;
+
+        try {
+            await updatePendingMessage(clientMessageId, {
+                status: "queued",
+                lastError: ""
+            });
+
+            setMessages(previous =>
+                previous.map(item =>
+                    item.clientMessageId === clientMessageId
+                        ? { ...item, status: "sending" }
                         : item
                 )
             );
 
-            setError(
-                err.response?.data?.message ||
-                "Message could not be sent. Please try again."
-            );
+            flushMessageOutbox(currentUserId.toString());
 
-        } finally {
-            setSending(false);
+        } catch (error) {
+            console.error("Retry failed:", error);
+            setError("Unable to retry this message.");
         }
     };
 
-    // Retry failed message
-    const retryMessage = (failedMessage) => {
-        setMessages((previous) =>
-            previous.filter((item) => item.id !== failedMessage.id)
-        );
-
-        setMessage(failedMessage.text);
-    };
+   
 
     return (
         <div
@@ -1050,6 +1090,7 @@ function ChatWindow({ chat, user, socket, onBack }) {
                     </button>
 
                     <input
+                        ref={messageInputRef}
                         type="text"
                         value={message}
                         // onChange={(e) => setMessage(e.target.value)}
@@ -1072,7 +1113,8 @@ function ChatWindow({ chat, user, socket, onBack }) {
                         }}
                     />
 
-                    <button
+                    {/* <button
+                    
                         type="button"
                         onClick={sendMessage}
                         disabled={!message.trim() || sending}
@@ -1094,6 +1136,23 @@ function ChatWindow({ chat, user, socket, onBack }) {
                         ) : (
                             <i className="bi bi-send-fill" />
                         )}
+                    </button> */}
+                    <button
+                        type="button"
+                        onPointerDown={(e) => e.preventDefault()}
+                        onClick={sendMessage}
+                        disabled={!message.trim()}
+                        className="btn rounded-circle d-flex align-items-center justify-content-center"
+                        style={{
+                            width: "42px",
+                            height: "42px",
+                            flexShrink: 0,
+                            backgroundColor: "var(--color-primary)",
+                            color: "var(--color-white)",
+                            opacity: !message.trim() ? 0.6 : 1
+                        }}
+                    >
+                        <i className="bi bi-send-fill" />
                     </button>
 
                 </div>

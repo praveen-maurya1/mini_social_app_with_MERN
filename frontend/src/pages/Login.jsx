@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import API from "../services/api";
 import { useToast } from "../context/ToastContext";
-import { connectSocket } from "../services/socket";
 
 function Login() {
     const navigate = useNavigate();
@@ -41,8 +40,8 @@ function Login() {
                 "user",
                 JSON.stringify(response.data.user)
             );
-            // Establish global Socket.IO connection
-            connectSocket(response.data.accessToken);
+            // Notify SocketInitializer that authentication is complete
+            window.dispatchEvent(new Event("auth:login"));
             showToast(
                 "Logged In successfully", "success"
             );
