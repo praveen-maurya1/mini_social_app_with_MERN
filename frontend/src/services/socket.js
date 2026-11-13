@@ -4,29 +4,19 @@ import API from "./api";
 let socket = null;
 
 export const connectSocket = (token) => {
-    // Prevent duplicate connections
-    if (socket?.connected) {
+    if (!token) return null;
+
+    // Reuse existing socket, including while connecting
+    if (socket) {
         return socket;
     }
 
-    // Disconnect any previous instance
-    if (socket) {
-        socket.disconnect();
-        socket = null;
-    }
-
-    // socket = io("http://localhost:3000", {
-    //     auth: { token },
-    //     transports: ["websocket"],
-    //     reconnection: true,
-    // });
-    socket = io("import.meta.env.VITE_SOCKET_URL", {
+    socket = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:3000", {
         auth: { token },
         transports: ["websocket"],
         reconnection: true,
     });
 
-    // Global message delivery acknowledgement
     socket.on("message:new", async ({ message, conversationId }) => {
         if (!message?._id || !conversationId) return;
 
@@ -51,6 +41,10 @@ export const connectSocket = (token) => {
 
     socket.on("disconnect", (reason) => {
         console.log("Global socket disconnected:", reason);
+    });
+
+    socket.on("connect_error", (error) => {
+        console.error("Socket connection error:", error.message);
     });
 
     return socket;

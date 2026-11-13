@@ -14,15 +14,10 @@ export function SocketProvider({ children }) {
         const token = localStorage.getItem("token");
 
         if (!token) return;
-
-        const socket = io("import.meta.env.VITE_SOCKET_URL", {
+        const socket = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:3000", {
             auth: { token },
             transports: ["websocket"],
         });
-        // const socket = io("http://localhost:3000", {
-        //     auth: { token },
-        //     transports: ["websocket"],
-        // });
 
         socketRef.current = socket;
 

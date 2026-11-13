@@ -10,7 +10,7 @@ import Notifications from "./pages/Notifications";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import PostDetailsDialog from "./components/home/PostDetails";
-import { SocketProvider } from "./context/SocketContext";
+import SocketInitializer from "./components/SocketInitializer";
 
 // import AdminLayout from "./pages/admin/AdminLayout";
 // import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -29,79 +29,79 @@ import ProtectedRoute from "./components/ProtectedRoute";
 function App() {
   return (
     <BrowserRouter>
-      <SocketProvider>
-        <Routes>
+      <SocketInitializer />
+      <Routes>
 
-          {/* Authentication */}
-          <Route path="/" element={<Login />} />
+        {/* Authentication */}
+        <Route path="/" element={<Login />} />
 
-          <Route path="/signup" element={<Signup />} />
+        <Route path="/signup" element={<Signup />} />
 
-          <Route path="/verify-otp" element={<VerifyOtp />} />
+        <Route path="/verify-otp" element={<VerifyOtp />} />
 
-          {/* Protected Home */}
-          <Route
-            path="/home"
-            element={
-              <ProtectedRoute>
+        {/* Protected Home */}
+        <Route
+          path="/home"
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/search"
+          element={
+            <ProtectedRoute>
+              <Search />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/chats"
+          element={
+            <ProtectedRoute>
+              <Chats />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <Notifications />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/post/:id"
+          element={
+            <ProtectedRoute>
+              <>
                 <Home />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/search"
-            element={
-              <ProtectedRoute>
-                <Search />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/chats"
-            element={
-              <ProtectedRoute>
-                <Chats />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/notifications"
-            element={
-              <ProtectedRoute>
-                <Notifications />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/post/:id"
-            element={
-              <ProtectedRoute>
-                <>
-                  <Home />
-                  <PostDetailsDialog />
-                </>
-              </ProtectedRoute>
-            }
-          />
-          {/* <Route
+                <PostDetailsDialog />
+              </>
+            </ProtectedRoute>
+          }
+        />
+        {/* <Route
           path="/admin"
           element={
             <ProtectedRoute>
@@ -122,8 +122,7 @@ function App() {
 
 
 
-        </Routes>
-      </SocketProvider>
+      </Routes>
     </BrowserRouter>
   );
 }
