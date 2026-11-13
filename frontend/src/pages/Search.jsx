@@ -6,9 +6,12 @@ import MobileNav from "../components/layout/MobileNav";
 
 import SuggestedUsers from "../components/home/SuggestedUsers";
 import Trending from "../components/home/Trending";
-
+import { useNavigate } from "react-router-dom";
 
 function Search() {
+    const navigate = useNavigate();
+
+    const [chatStatus, setChatStatus] = useState({});
     const [searchQuery, setSearchQuery] = useState("");
     const [activeFilter, setActiveFilter] = useState("All");
 
@@ -19,6 +22,8 @@ function Search() {
 
     const [followStatus, setFollowStatus] = useState({});
     const [followLoading, setFollowLoading] = useState({});
+
+    const [followedByStatus, setFollowedByStatus] = useState({});
 
     const query = searchQuery.trim().toLowerCase();
 
@@ -48,31 +53,59 @@ function Search() {
     const currentUserId = JSON.parse(
         localStorage.getItem("user") || "{}"
     )?._id;
+    const handleStartChat = async (targetUserId) => {
+        if (!targetUserId) return;
 
+        try {
+            const response = await API.post(
+                `/conversations/${targetUserId}`
+            );
+
+            const conversation = response.data.conversation;
+
+            navigate("/chats", {
+                state: { conversation }
+            });
+
+        } catch (error) {
+            console.error(
+                "Unable to start conversation:",
+                error.response?.data || error
+            );
+        }
+    };
     const handleFollowToggle = async (targetUserId) => {
         if (!targetUserId || followLoading[targetUserId]) return;
 
         try {
             setFollowLoading(prev => ({
                 ...prev,
-                [targetUserId]: true,
+                [targetUserId]: true
             }));
 
-            if (followStatus[targetUserId]) {
-                await API.delete(`/follows/${targetUserId}`);
+            const currentlyFollowing = !!followStatus[targetUserId];
+            const newFollowingStatus = !currentlyFollowing;
 
-                setFollowStatus(prev => ({
-                    ...prev,
-                    [targetUserId]: false,
-                }));
+            if (currentlyFollowing) {
+                await API.delete(`/follows/${targetUserId}`);
             } else {
                 await API.post(`/follows/${targetUserId}`);
-
-                setFollowStatus(prev => ({
-                    ...prev,
-                    [targetUserId]: true,
-                }));
             }
+
+            // Update Follow status immediately
+            setFollowStatus(prev => ({
+                ...prev,
+                [targetUserId]: newFollowingStatus
+            }));
+
+            // Update Chat permission immediately
+            const isFollowedBy = !!followedByStatus[targetUserId];
+
+            setChatStatus(prev => ({
+                ...prev,
+                [targetUserId]: newFollowingStatus && isFollowedBy
+            }));
+
         } catch (error) {
             console.error("Follow toggle error:", error);
 
@@ -83,19 +116,22 @@ function Search() {
         } finally {
             setFollowLoading(prev => ({
                 ...prev,
-                [targetUserId]: false,
+                [targetUserId]: false
             }));
         }
     };
     useEffect(() => {
         fetchMe();
     }, []);
+
+
     useEffect(() => {
         let isMounted = true;
 
         const fetchFollowStatuses = async () => {
             if (!users.length) {
                 setFollowStatus({});
+                setChatStatus({});
                 return;
             }
 
@@ -107,19 +143,53 @@ function Search() {
                                 `/follows/${person._id}/status`
                             );
 
-                            return [
-                                person._id,
-                                response.data.isFollowing
-                            ];
+                            return {
+                                userId: person._id,
+                                isFollowing: response.data.isFollowing,
+                                isFollowedBy: response.data.isFollowedBy,
+                                canChat: response.data.canChat
+                            };
                         } catch {
-                            return [person._id, false];
+                            return {
+                                userId: person._id,
+                                isFollowing: false,
+                                isFollowedBy: false,
+                                canChat: false
+                            };
                         }
                     })
                 );
 
                 if (isMounted) {
-                    setFollowStatus(Object.fromEntries(results));
+                    const followingMap = {};
+                    const followedByMap = {};
+                    const chatMap = {};
+
+                    results.forEach((item) => {
+                        followingMap[item.userId] = item.isFollowing;
+                        followedByMap[item.userId] = item.isFollowedBy;
+                        chatMap[item.userId] =
+                            item.isFollowing && item.isFollowedBy;
+                    });
+
+                    setFollowStatus(followingMap);
+                    setFollowedByStatus(followedByMap);
+                    setChatStatus(chatMap);
                 }
+
+                if (isMounted) {
+                    const followingMap = {};
+                    const chatMap = {};
+
+                    results.forEach((item) => {
+                        followingMap[item.userId] = item.isFollowing;
+                        chatMap[item.userId] = item.canChat;
+                    });
+
+                    setFollowStatus(followingMap);
+                    setChatStatus(chatMap);
+                }
+
             } catch (error) {
                 console.error("Follow status fetch error:", error);
             }
@@ -131,6 +201,8 @@ function Search() {
             isMounted = false;
         };
     }, [users]);
+
+
     useEffect(() => {
         if (!query) {
             setUsers([]);
@@ -480,32 +552,54 @@ function Search() {
                                                                 </div>
 
                                                                 {currentUserId !== user._id && (
-                                                                    <button
-                                                                        type="button"
-                                                                        className="btn btn-sm px-3"
-                                                                        onClick={() => handleFollowToggle(user._id)}
-                                                                        disabled={
-                                                                            followLoading[user._id] ||
-                                                                            followStatus[user._id] === undefined
-                                                                        }
-                                                                        style={{
-                                                                            backgroundColor: followStatus[user._id]
-                                                                                ? "var(--color-surface-secondary)"
-                                                                                : "var(--color-primary-light)",
-                                                                            color: followStatus[user._id]
-                                                                                ? "var(--color-text-secondary)"
-                                                                                : "var(--color-primary)",
-                                                                            borderRadius: "var(--radius-pill)",
-                                                                            fontWeight: 600,
-                                                                            border: "none",
-                                                                        }}
-                                                                    >
-                                                                        {followLoading[user._id]
-                                                                            ? "Please wait..."
-                                                                            : followStatus[user._id]
-                                                                                ? "Following"
-                                                                                : "Follow"}
-                                                                    </button>
+                                                                    <>
+                                                                        {/* Message Button - Only for mutual followers */}
+                                                                        {chatStatus[user._id] === true && (
+                                                                            <button
+                                                                                type="button"
+                                                                                className="btn btn-sm px-3"
+                                                                                onClick={() => handleStartChat(user._id)}
+                                                                                style={{
+                                                                                    backgroundColor: "var(--color-primary-light)",
+                                                                                    color: "var(--color-primary)",
+                                                                                    borderRadius: "var(--radius-pill)",
+                                                                                    fontWeight: 600,
+                                                                                    border: "none",
+                                                                                }}
+                                                                            >
+                                                                                <i className="bi bi-chat-dots me-1" />
+                                                                                Message
+                                                                            </button>
+                                                                        )}
+
+                                                                        {/* Follow Button */}
+                                                                        <button
+                                                                            type="button"
+                                                                            className="btn btn-sm px-3"
+                                                                            onClick={() => handleFollowToggle(user._id)}
+                                                                            disabled={
+                                                                                followLoading[user._id] ||
+                                                                                followStatus[user._id] === undefined
+                                                                            }
+                                                                            style={{
+                                                                                backgroundColor: followStatus[user._id]
+                                                                                    ? "var(--color-surface-secondary)"
+                                                                                    : "var(--color-primary-light)",
+                                                                                color: followStatus[user._id]
+                                                                                    ? "var(--color-text-secondary)"
+                                                                                    : "var(--color-primary)",
+                                                                                borderRadius: "var(--radius-pill)",
+                                                                                fontWeight: 600,
+                                                                                border: "none",
+                                                                            }}
+                                                                        >
+                                                                            {followLoading[user._id]
+                                                                                ? "Please wait..."
+                                                                                : followStatus[user._id]
+                                                                                    ? "Following"
+                                                                                    : "Follow"}
+                                                                        </button>
+                                                                    </>
                                                                 )}
                                                             </div>
                                                         ))}

@@ -238,66 +238,6 @@ function PostCard({ post, user, onLikeUpdate }) {
                 </div>
 
                 {/* More Dropdown */}
-                {/* {!isOwnPost && targetUserId && (
-                    <div className="position-relative">
-                        <button
-                            type="button"
-                            className="btn p-1 border-0"
-                            onClick={handleMoreMenu}
-                            style={{
-                                color: "var(--color-text-muted)",
-                            }}
-                        >
-                            <i className="bi bi-three-dots fs-5" />
-                        </button>
-
-                        {showMoreMenu && (
-                            <div
-                                className="position-absolute end-0"
-                                style={{
-                                    top: "100%",
-                                    marginTop: "6px",
-                                    zIndex: 1050,
-                                    width: "160px",
-                                    background: "var(--color-surface)",
-                                    border: "1px solid var(--color-border)",
-                                    borderRadius: "var(--radius-md)",
-                                    boxShadow: "var(--shadow-lg)",
-                                    overflow: "hidden",
-                                }}
-                            >
-                                <button
-                                    type="button"
-                                    className="btn w-100 d-flex align-items-center gap-2 text-start border-0 rounded-0 px-3 py-2"
-                                    onClick={handleFollowToggle}
-                                    disabled={followLoading || followStatusLoading}
-                                    style={{
-                                        color: "var(--color-text-primary)",
-                                        backgroundColor: "transparent",
-                                        fontSize: "14px",
-                                    }}
-                                >
-                                    <i
-                                        className={`bi ${isFollowing
-                                                ? "bi-person-dash"
-                                                : "bi-person-plus"
-                                            }`}
-                                    />
-
-                                    {followStatusLoading
-                                        ? "Loading..."
-                                        : followLoading
-                                            ? "Please wait..."
-                                            : isFollowing
-                                                ? "Unfollow"
-                                                : "Follow"}
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                )} */}
-
-
                 {!isOwnPost && targetUserId && (
                     <div className="position-relative">
                         <button
