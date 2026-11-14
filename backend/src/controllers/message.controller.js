@@ -289,6 +289,7 @@ export async function markMessagesDelivered(req, res) {
 
 
 // Mark incoming messages as read
+
 export async function markMessagesRead(req, res) {
     try {
         const receiverId = req.user._id;
@@ -325,18 +326,16 @@ export async function markMessagesRead(req, res) {
 
         const now = new Date();
 
-        // Find unread incoming messages
+        // Fetch unread messages and identify those not yet delivered
         const unreadMessages = await messageModel.find({
             conversationId,
             sender: senderId,
             receiver: receiverId,
             readAt: null,
             expiresAt: { $gt: now }
-        }).select("_id").lean();
+        }).select("_id deliveredAt").lean();
 
-        const messageIds = unreadMessages.map(msg => msg._id);
-
-        if (messageIds.length === 0) {
+        if (unreadMessages.length === 0) {
             return res.status(200).json({
                 message: "No unread messages",
                 readCount: 0,
@@ -344,56 +343,66 @@ export async function markMessagesRead(req, res) {
             });
         }
 
-        // Read implies delivered
-        const deliveredResult = await messageModel.updateMany(
-            {
-                _id: { $in: messageIds },
-                deliveredAt: null
-            },
-            {
-                $set: { deliveredAt: now }
-            }
-        );
+        const messageIds = unreadMessages.map(msg => msg._id);
 
-        // Mark messages as read
-        const readResult = await messageModel.updateMany(
+        const newlyDeliveredIds = unreadMessages
+            .filter(msg => !msg.deliveredAt)
+            .map(msg => msg._id.toString());
+
+        // Mark as read and set deliveredAt only if it was previously empty.
+        // One database write instead of two updateMany calls.
+        const result = await messageModel.updateMany(
             {
                 _id: { $in: messageIds },
                 conversationId,
+                sender: senderId,
                 receiver: receiverId,
                 readAt: null,
                 expiresAt: { $gt: now }
             },
+            [
+                {
+                    $set: {
+                        readAt: now,
+                        deliveredAt: {
+                            $ifNull: ["$deliveredAt", now]
+                        }
+                    }
+                }
+            ],
             {
-                $set: { readAt: now }
+                updatePipeline: true
             }
         );
 
         const io = req.app.get("io");
 
-        if (io) {
-            // Send delivered event for messages that were not delivered before
-            if (deliveredResult.modifiedCount > 0) {
+        if (io && result.modifiedCount > 0) {
+            // Emit delivery only for messages newly delivered by this operation
+            if (newlyDeliveredIds.length > 0) {
                 io.to(`user:${senderId}`).emit("message:delivered", {
                     conversationId: conversationId.toString(),
-                    messageIds: messageIds.map(id => id.toString()),
+                    messageIds: newlyDeliveredIds,
                     deliveredAt: now
                 });
             }
 
-            // Send read receipt
-            if (readResult.modifiedCount > 0) {
-                io.to(`user:${senderId}`).emit("message:read", {
-                    conversationId: conversationId.toString(),
-                    messageIds: messageIds.map(id => id.toString()),
-                    readAt: now
-                });
-            }
+            // Emit read receipt
+            io.to(`user:${senderId}`).emit("message:read", {
+                conversationId: conversationId.toString(),
+                messageIds: messageIds.map(id => id.toString()),
+                readAt: now
+            });
+            console.log("🔵 Emitting message:read", {
+                senderId: senderId.toString(),
+                messageIds: messageIds.map(id => id.toString()),
+                modifiedCount: result.modifiedCount
+            });
         }
 
         return res.status(200).json({
             message: "Messages marked as read",
-            readCount: readResult.modifiedCount,
+            readCount: result.modifiedCount,
             messageIds: messageIds.map(id => id.toString()),
             readAt: now
         });
@@ -406,3 +415,4 @@ export async function markMessagesRead(req, res) {
         });
     }
 }
+

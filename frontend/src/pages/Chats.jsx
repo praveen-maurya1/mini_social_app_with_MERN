@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 
 import Sidebar from "../components/layout/Sidebar";
 import Topbar from "../components/layout/Topbar";
@@ -65,7 +65,7 @@ const formatConversation = (conversation) => {
             })
             : "",
 
-        unread: 0,
+        unread: conversation.unreadCount || 0,
         messages: [],
     };
 
@@ -86,7 +86,12 @@ function Chats() {
 
     const [hasMore, setHasMore] = useState(false);
     const [nextCursor, setNextCursor] = useState(null);
+    const selectedChatRef = useRef(null);
+    const processedMessageIdsRef = useRef(new Set());
 
+    useEffect(() => {
+        selectedChatRef.current = selectedChat;
+    }, [selectedChat]);
     const [socket, setSocket] = useState(null);
 
     // Fetch logged-in user
@@ -326,13 +331,42 @@ function Chats() {
         };
 
         // Incoming message: update conversation preview
+
         const handleNewMessage = ({ message, conversationId }) => {
             if (!message || !conversationId) return;
 
+            const messageId = message._id?.toString();
+            const senderId = getUserId(message.sender);
+            const currentUserId = getUserId(user?._id || user?.id);
+
+            // Prevent duplicate unread increments
+            if (messageId && processedMessageIdsRef.current.has(messageId)) {
+                return;
+            }
+
+            if (messageId) {
+                processedMessageIdsRef.current.add(messageId);
+            }
+
+            // Keep the deduplication set bounded
+            if (processedMessageIdsRef.current.size > 1000) {
+                const firstId = processedMessageIdsRef.current.values().next().value;
+                processedMessageIdsRef.current.delete(firstId);
+            }
+
+            const isIncoming = senderId !== currentUserId;
+
+            const isCurrentlyOpen =
+                selectedChatRef.current?._id?.toString() ===
+                conversationId.toString();
+
+            const shouldIncrementUnread =
+                isIncoming && !isCurrentlyOpen;
+
             const messageData = {
                 lastMessage: message.text || "",
-                lastMessageId: message._id?.toString() || "",
-                lastMessageSenderId: getUserId(message.sender),
+                lastMessageId: messageId || "",
+                lastMessageSenderId: senderId,
                 lastMessageStatus: message.readAt
                     ? "read"
                     : message.deliveredAt
@@ -344,9 +378,9 @@ function Chats() {
                 time: message.createdAt
                     ? new Date(message.createdAt).toLocaleTimeString([], {
                         hour: "2-digit",
-                        minute: "2-digit",
+                        minute: "2-digit"
                     })
-                    : "",
+                    : ""
             };
 
             setConversations((prev) => {
@@ -358,6 +392,9 @@ function Chats() {
                     return {
                         ...chat,
                         ...messageData,
+                        unread: shouldIncrementUnread
+                            ? (chat.unread || 0) + 1
+                            : chat.unread || 0
                     };
                 });
 
@@ -383,10 +420,11 @@ function Chats() {
 
                 return {
                     ...prev,
-                    ...messageData,
+                    ...messageData
                 };
             });
         };
+
 
         // Register listeners on the existing global socket
         existingSocket.on("user:online", handleUserOnline);
@@ -410,7 +448,22 @@ function Chats() {
     }, [user, fetchConversations]);
 
     const handleSelectChat = (chat) => {
-        setSelectedChat(chat);
+        const conversationId = chat._id.toString();
+
+        selectedChatRef.current = chat;
+
+        setConversations((prev) =>
+            prev.map((item) =>
+                item._id.toString() === conversationId
+                    ? { ...item, unread: 0 }
+                    : item
+            )
+        );
+
+        setSelectedChat({
+            ...chat,
+            unread: 0
+        });
     };
 
     const handleBack = () => {

@@ -33,7 +33,8 @@ function ChatWindow({ chat, user, socket, onBack }) {
     const loadingOlderRef = useRef(false);
     const messageInputRef = useRef(null);
     const pendingSendsRef = useRef(0);
-
+    const readInFlightRef = useRef(false);
+    const readAgainRef = useRef(false);
     const conversationId = chat?._id;
     // Stop typing indicator
     const stopTyping = useCallback(() => {
@@ -217,46 +218,21 @@ function ChatWindow({ chat, user, socket, onBack }) {
         });
     };
     // Acknowledge received messages
+    const markMessagesRead = useCallback(async () => {
+        if (!conversationId) return;
 
-
-    const markMessagesDelivered = useCallback(async (messageIds) => {
-        console.log("🔔 markMessagesDelivered called");
-        console.log("Conversation ID:", conversationId);
-        console.log("Message IDs:", messageIds);
-
-        if (!conversationId || !messageIds?.length) {
-            console.log("❌ Missing conversationId or messageIds");
+        // Avoid overlapping read requests
+        if (readInFlightRef.current) {
+            readAgainRef.current = true;
             return;
         }
 
-        try {
-            console.log("🚀 Sending PATCH request...");
-
-            const response = await API.patch(
-                `/messages/${conversationId}/delivered`,
-                { messageIds }
-            );
-
-            console.log("✅ Delivery API response:", response.data);
-
-        } catch (error) {
-            console.error(
-                "❌ Delivery acknowledgement error:",
-                error.response?.data || error.message
-            );
-        }
-    }, [conversationId]);
-
-
-    const markMessagesRead = useCallback(async () => {
-        if (!conversationId) return;
+        readInFlightRef.current = true;
 
         try {
             const response = await API.patch(
                 `/messages/${conversationId}/read`
             );
-
-            console.log("Messages marked as read:", response.data);
 
             const readAt = response.data.readAt;
 
@@ -280,13 +256,25 @@ function ChatWindow({ chat, user, socket, onBack }) {
                     })
                 );
             }
+
         } catch (error) {
             console.error(
                 "Read acknowledgement failed:",
                 error.response?.data || error.message
             );
+
+        } finally {
+            readInFlightRef.current = false;
+
+            // If another message arrived during the request,
+            // run one more acknowledgement.
+            if (readAgainRef.current) {
+                readAgainRef.current = false;
+                markMessagesRead();
+            }
         }
     }, [conversationId]);
+
 
 
 
@@ -365,20 +353,7 @@ function ChatWindow({ chat, user, socket, onBack }) {
             // Opening the conversation marks incoming messages as read
             await markMessagesRead();
 
-            // Acknowledge previously received undelivered messages
-            const pendingDeliveryIds = messageList
-                .filter((msg) => {
-                    return (
-                        getSenderId(msg.sender) !== currentUserId?.toString() &&
-                        !msg.deliveredAt
-                    );
-                })
-                .map((msg) => msg._id);
-
-            if (pendingDeliveryIds.length > 0) {
-                markMessagesDelivered(pendingDeliveryIds);
-            }
-
+        
             setHasMore(
                 data.pagination?.hasMore ??
                 data.hasMore ??
@@ -708,6 +683,11 @@ function ChatWindow({ chat, user, socket, onBack }) {
 
                     console.log("✅ Updating message:", messageId);
 
+                    // Never downgrade a message that is already read
+                    if (msg.status === "read" || msg.readAt) {
+                        return msg;
+                    }
+
                     return {
                         ...msg,
                         status: "delivered",
@@ -729,11 +709,45 @@ function ChatWindow({ chat, user, socket, onBack }) {
     useEffect(() => {
         if (!socket || !conversationId) return;
 
+        // const handleMessageRead = (data) => {
+        //     if (
+        //         data.conversationId?.toString() !==
+        //         conversationId.toString()
+        //     ) {
+        //         return;
+        //     }
+
+        //     const readIds = new Set(
+        //         (data.messageIds || []).map(id => id.toString())
+        //     );
+
+        //     if (readIds.size === 0) return;
+
+        //     setMessages(previous =>
+        //         previous.map(msg => {
+        //             const messageId = (msg._id || msg.id)?.toString();
+
+        //             if (!readIds.has(messageId)) return msg;
+
+        //             return {
+        //                 ...msg,
+        //                 status: "read",
+        //                 readAt: data.readAt,
+        //                 deliveredAt: msg.deliveredAt || data.readAt
+        //             };
+        //         })
+        //     );
+        // };
+
+
         const handleMessageRead = (data) => {
+            console.log("🔵 MESSAGE READ EVENT RECEIVED:", data);
+
             if (
                 data.conversationId?.toString() !==
                 conversationId.toString()
             ) {
+                console.log("❌ Read conversation mismatch");
                 return;
             }
 
@@ -741,13 +755,15 @@ function ChatWindow({ chat, user, socket, onBack }) {
                 (data.messageIds || []).map(id => id.toString())
             );
 
-            if (readIds.size === 0) return;
+            console.log("🔵 Read IDs:", [...readIds]);
 
             setMessages(previous =>
                 previous.map(msg => {
                     const messageId = (msg._id || msg.id)?.toString();
 
                     if (!readIds.has(messageId)) return msg;
+
+                    console.log("✅ Updating message to READ:", messageId);
 
                     return {
                         ...msg,
@@ -758,6 +774,7 @@ function ChatWindow({ chat, user, socket, onBack }) {
                 })
             );
         };
+
 
         socket.on("message:read", handleMessageRead);
 

@@ -85,6 +85,7 @@ export async function createOrGetConversation(req, res) {
 
 
 // Get user's conversations with cursor pagination
+
 export async function getConversations(req, res) {
     try {
         const userId = req.user._id;
@@ -101,7 +102,7 @@ export async function getConversations(req, res) {
             isActive: true
         };
 
-        // Cursor points to the last conversation from previous batch
+        // Cursor pagination
         if (cursor) {
             if (!mongoose.Types.ObjectId.isValid(cursor)) {
                 return res.status(400).json({
@@ -146,7 +147,6 @@ export async function getConversations(req, res) {
                 path: "participants",
                 select: "username displayName firstName lastName image isOnline lastSeen"
             })
-           
             .populate({
                 path: "lastMessage",
                 match: {
@@ -159,7 +159,38 @@ export async function getConversations(req, res) {
         const hasMore = conversations.length > limit;
         const results = conversations.slice(0, limit);
 
-        // Find the other participant
+        // Get conversation IDs from current page
+        const conversationIds = results.map(
+            conversation => conversation._id
+        );
+
+        // Calculate unread messages for each conversation
+        const unreadResults = await messageModel.aggregate([
+            {
+                $match: {
+                    conversationId: { $in: conversationIds },
+                    receiver: userId,
+                    readAt: null,
+                    expiresAt: { $gt: new Date() }
+                }
+            },
+            {
+                $group: {
+                    _id: "$conversationId",
+                    unreadCount: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Create lookup map
+        const unreadCountMap = new Map(
+            unreadResults.map(item => [
+                item._id.toString(),
+                item.unreadCount
+            ])
+        );
+
+        // Format conversations
         const formattedConversations = results.map(conversation => {
             const otherUser = conversation.participants.find(
                 participant =>
@@ -168,7 +199,11 @@ export async function getConversations(req, res) {
 
             return {
                 ...conversation,
-                otherUser: otherUser || null
+                otherUser: otherUser || null,
+
+                // WhatsApp-style unread count
+                unreadCount:
+                    unreadCountMap.get(conversation._id.toString()) || 0
             };
         });
 
@@ -194,3 +229,4 @@ export async function getConversations(req, res) {
         });
     }
 }
+
