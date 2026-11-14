@@ -1,6 +1,5 @@
-
 import API from "./api";
-
+import { sendMessageViaSocket } from "./socket";
 const DB_NAME = "cache_message_outbox";
 const STORE_NAME = "pending_messages";
 const DB_VERSION = 1;
@@ -155,6 +154,7 @@ export const updatePendingMessage = async (clientMessageId, updates) => {
 
 // Send pending messages for the authenticated user
 
+
 export const flushMessageOutbox = async (userId) => {
     if (!userId || flushing || !navigator.onLine) return;
 
@@ -163,70 +163,101 @@ export const flushMessageOutbox = async (userId) => {
     try {
         const pending = await getPendingMessages(userId);
 
+        // Process messages in queue order
         for (const item of pending) {
             if (item.status !== "queued") continue;
 
             if (!navigator.onLine) break;
 
-            try {
-                const response = await API.post(
+            const payload = {
+                text: item.text,
+                clientMessageId: item.clientMessageId
+            };
+
+            // Socket.IO and REST API run simultaneously
+            const results = await Promise.allSettled([
+                sendMessageViaSocket({
+                    conversationId: item.conversationId,
+                    ...payload
+                }),
+
+                API.post(
                     `/messages/${item.conversationId}`,
-                    {
-                        text: item.text,
-                        clientMessageId: item.clientMessageId
-                    }
-                );
+                    payload
+                )
+            ]);
+
+            const successfulResult = results.find(
+                result => result.status === "fulfilled"
+            );
+
+            if (successfulResult) {
+                const responseData =
+                    successfulResult.value.message ||
+                    successfulResult.value.data?.data;
 
                 window.dispatchEvent(
                     new CustomEvent("outbox:sent", {
                         detail: {
                             clientMessageId: item.clientMessageId,
-                            message: response.data.data
+                            message: responseData
                         }
                     })
                 );
 
                 await deletePendingMessage(item.clientMessageId);
 
-            } catch (error) {
-                const status = error.response?.status;
+                continue;
+            }
 
-                const permanentFailure =
+            // Both transports failed
+            const errors = results
+                .filter(result => result.status === "rejected")
+                .map(result => result.reason);
+
+            const permanentFailure = errors.every(error => {
+                const status = error.response?.status || error.status;
+
+                return (
                     status >= 400 &&
                     status < 500 &&
                     status !== 408 &&
-                    status !== 429;
-
-                const updates = {
-                    status: permanentFailure ? "failed" : "queued",
-                    lastError:
-                        error.response?.data?.message ||
-                        error.message,
-                    attempts: (item.attempts || 0) + 1,
-                    lastAttemptAt: Date.now()
-                };
-
-                await updatePendingMessage(
-                    item.clientMessageId,
-                    updates
+                    status !== 429
                 );
+            });
 
-                window.dispatchEvent(
-                    new CustomEvent("outbox:failed", {
-                        detail: {
-                            clientMessageId: item.clientMessageId,
-                            ...updates
-                        }
-                    })
-                );
+            const updates = {
+                status: permanentFailure ? "failed" : "queued",
+                lastError: errors
+                    .map(error => error.message)
+                    .join(" | "),
+                attempts: (item.attempts || 0) + 1,
+                lastAttemptAt: Date.now()
+            };
 
-                // Stop here to preserve message order.
-                break;
-            }
+            await updatePendingMessage(
+                item.clientMessageId,
+                updates
+            );
+
+            window.dispatchEvent(
+                new CustomEvent("outbox:failed", {
+                    detail: {
+                        clientMessageId: item.clientMessageId,
+                        ...updates
+                    }
+                })
+            );
+
+            // Preserve order; stop until this message is retried
+            break;
         }
+
     } catch (error) {
         console.error("Outbox sync error:", error);
+
     } finally {
         flushing = false;
     }
 };
+

@@ -442,7 +442,7 @@ function Chats() {
                     className="flex-grow-1 min-vw-0 d-flex flex-column h-100"
                     style={{ minHeight: 0 }}
                 >
-                    <Topbar />
+                    <Topbar user={user} />
 
                     <div
                         className="container-fluid flex-grow-1 p-0 overflow-hidden"

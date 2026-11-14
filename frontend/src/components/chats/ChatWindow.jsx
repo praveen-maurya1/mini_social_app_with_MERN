@@ -179,6 +179,21 @@ function ChatWindow({ chat, user, socket, onBack }) {
         };
     };
 
+
+    const formatPendingMessage = (item) => {
+        return {
+            ...item,
+            id: item.clientMessageId,
+            _id: item.clientMessageId,
+            clientMessageId: item.clientMessageId,
+            senderId: currentUserId.toString(),
+            text: item.text,
+            time: formatTime(item.createdAt),
+            status: item.status === "failed" ? "failed" : "sending"
+        };
+    };
+
+
     // Add message without duplicates
     const addMessage = (newMessage) => {
         const formatted = formatMessage(newMessage);
@@ -312,7 +327,41 @@ function ChatWindow({ chat, user, socket, onBack }) {
                 .map(formatMessage)
                 .reverse();
 
-            setMessages(formattedMessages);
+            // Restore locally saved messages
+            const pendingMessages = await getPendingMessages(
+                currentUserId.toString(),
+                conversationId.toString()
+            );
+
+            const formattedPendingMessages = pendingMessages.map(
+                formatPendingMessage
+            );
+
+            // Merge server messages and local pending messages
+            const mergedMessages = [
+                ...formattedMessages,
+                ...formattedPendingMessages
+            ];
+
+            // Remove duplicates using clientMessageId / MongoDB ID
+            const uniqueMessages = new Map();
+
+            mergedMessages.forEach(item => {
+                const key = item.clientMessageId || item._id || item.id;
+                uniqueMessages.set(key.toString(), item);
+            });
+
+            // Maintain chronological order
+            const finalMessages = [...uniqueMessages.values()].sort(
+                (a, b) =>
+                    new Date(a.createdAt).getTime() -
+                    new Date(b.createdAt).getTime()
+            );
+
+            setMessages(finalMessages);
+
+
+
             // Opening the conversation marks incoming messages as read
             await markMessagesRead();
 
@@ -577,6 +626,7 @@ function ChatWindow({ chat, user, socket, onBack }) {
     }, [socket, conversationId]);
 
     useEffect(() => {
+
         const handleOutboxSent = (event) => {
             const { clientMessageId, message: savedMessage } = event.detail || {};
 
@@ -584,14 +634,28 @@ function ChatWindow({ chat, user, socket, onBack }) {
 
             const formatted = formatMessage(savedMessage);
 
-            setMessages(previous =>
-                previous.map(item =>
-                    item.clientMessageId === clientMessageId
-                        ? formatted
-                        : item
-                )
-            );
+            setMessages(previous => {
+                const existingIndex = previous.findIndex(item =>
+                    item.clientMessageId === clientMessageId ||
+                    item._id === formatted._id
+                );
+
+                if (existingIndex !== -1) {
+                    return previous.map((item, index) =>
+                        index === existingIndex
+                            ? { ...item, ...formatted }
+                            : item
+                    );
+                }
+
+                return [...previous, formatted].sort(
+                    (a, b) =>
+                        new Date(a.createdAt).getTime() -
+                        new Date(b.createdAt).getTime()
+                );
+            });
         };
+
 
         const handleOutboxFailed = (event) => {
             const { clientMessageId } = event.detail || {};
@@ -784,7 +848,7 @@ function ChatWindow({ chat, user, socket, onBack }) {
         }
     };
 
-   
+
 
     return (
         <div
@@ -1112,31 +1176,6 @@ function ChatWindow({ chat, user, socket, onBack }) {
                             fontSize: "14px"
                         }}
                     />
-
-                    {/* <button
-                    
-                        type="button"
-                        onClick={sendMessage}
-                        disabled={!message.trim() || sending}
-                        className="btn rounded-circle d-flex align-items-center justify-content-center"
-                        style={{
-                            width: "42px",
-                            height: "42px",
-                            flexShrink: 0,
-                            backgroundColor: "var(--color-primary)",
-                            color: "var(--color-white)",
-                            opacity: !message.trim() || sending ? 0.6 : 1
-                        }}
-                    >
-                        {sending ? (
-                            <span
-                                className="spinner-border spinner-border-sm"
-                                role="status"
-                            />
-                        ) : (
-                            <i className="bi bi-send-fill" />
-                        )}
-                    </button> */}
                     <button
                         type="button"
                         onPointerDown={(e) => e.preventDefault()}

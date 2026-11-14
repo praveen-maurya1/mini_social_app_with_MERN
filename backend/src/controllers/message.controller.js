@@ -4,121 +4,9 @@ import mongoose from "mongoose";
 import messageModel from "../models/message.model.js";
 import conversationModel from "../models/conversation.model.js";
 import followModel from "../models/follow.model.js";
-
+import { createMessageIdempotently, MessageServiceError } from "../services/message.service.js";
 
 // Send text message
-// export async function sendMessage(req, res) {
-//     try {
-//         const senderId = req.user._id;
-//         const { conversationId } = req.params;
-//         const { text } = req.body;
-
-//         if (!mongoose.Types.ObjectId.isValid(conversationId)) {
-//             return res.status(400).json({
-//                 message: "Invalid conversation ID"
-//             });
-//         }
-
-//         if (!text || !text.trim()) {
-//             return res.status(400).json({
-//                 message: "Message cannot be empty"
-//             });
-//         }
-
-//         if (text.trim().length > 5000) {
-//             return res.status(400).json({
-//                 message: "Message cannot exceed 5000 characters"
-//             });
-//         }
-
-//         // Verify conversation and membership
-//         const conversation = await conversationModel.findOne({
-//             _id: conversationId,
-//             participants: senderId,
-//             isActive: true
-//         });
-
-//         if (!conversation) {
-//             return res.status(404).json({
-//                 message: "Conversation not found"
-//             });
-//         }
-
-//         // Find receiver
-//         const receiverId = conversation.participants.find(
-//             id => id.toString() !== senderId.toString()
-//         );
-
-//         if (!receiverId) {
-//             return res.status(400).json({
-//                 message: "Invalid conversation participants"
-//             });
-//         }
-
-//         // Verify mutual follow before every new message
-//         const [senderFollowsReceiver, receiverFollowsSender] =
-//             await Promise.all([
-//                 followModel.exists({
-//                     follower: senderId,
-//                     following: receiverId
-//                 }),
-//                 followModel.exists({
-//                     follower: receiverId,
-//                     following: senderId
-//                 })
-//             ]);
-
-//         if (!senderFollowsReceiver || !receiverFollowsSender) {
-//             return res.status(403).json({
-//                 message: "Mutual follow is required to send messages"
-//             });
-//         }
-
-//         // Create message
-//         const message = await messageModel.create({
-//             conversationId,
-//             sender: senderId,
-//             receiver: receiverId,
-//             type: "text",
-//             text: text.trim()
-//         });
-
-//         // Update conversation's latest message
-//         conversation.lastMessage = message._id;
-//         conversation.lastMessageAt = message.createdAt;
-
-//         await conversation.save();
-
-//         // Populate message details
-//         const populatedMessage = await messageModel.findById(message._id)
-//             .populate("sender", "username displayName image")
-//             .populate("receiver", "username displayName image")
-//             .lean();
-
-//         // Send real-time event to receiver's personal room
-//         const io = req.app.get("io");
-
-//         if (io) {
-//             io.to(`user:${receiverId}`).emit("message:new", {
-//                 message: populatedMessage,
-//                 conversationId: conversation._id
-//             });
-//         }
-
-//         return res.status(201).json({
-//             message: "Message sent successfully",
-//             data: populatedMessage
-//         });
-
-//     } catch (error) {
-//         console.error("Send message error:", error);
-
-//         return res.status(500).json({
-//             message: "Failed to send message"
-//         });
-//     }
-// }
-
 
 export async function sendMessage(req, res) {
     try {
@@ -126,173 +14,29 @@ export async function sendMessage(req, res) {
         const { conversationId } = req.params;
         const { text, clientMessageId } = req.body;
 
-        if (!mongoose.Types.ObjectId.isValid(conversationId)) {
-            return res.status(400).json({
-                message: "Invalid conversation ID"
-            });
-        }
-
-        if (!text || !text.trim()) {
-            return res.status(400).json({
-                message: "Message cannot be empty"
-            });
-        }
-
-        if (text.trim().length > 5000) {
-            return res.status(400).json({
-                message: "Message cannot exceed 5000 characters"
-            });
-        }
-
-        // Validate client-generated ID
-        if (
-            clientMessageId !== undefined &&
-            (
-                typeof clientMessageId !== "string" ||
-                !clientMessageId.trim() ||
-                clientMessageId.length > 100
-            )
-        ) {
-            return res.status(400).json({
-                message: "Invalid client message ID"
-            });
-        }
-
-        // Verify conversation and membership
-        const conversation = await conversationModel.findOne({
-            _id: conversationId,
-            participants: senderId,
-            isActive: true
-        });
-
-        if (!conversation) {
-            return res.status(404).json({
-                message: "Conversation not found"
-            });
-        }
-
-        // IDEMPOTENCY CHECK:
-        // If this message was already saved, return the existing message.
-        // Do this before mutual-follow validation so retries remain safe.
-        if (clientMessageId) {
-            const existingMessage = await messageModel.findOne({
-                sender: senderId,
-                clientMessageId: clientMessageId.trim()
-            })
-                .populate("sender", "username displayName image")
-                .populate("receiver", "username displayName image")
-                .lean();
-
-            if (existingMessage) {
-                if (
-                    existingMessage.conversationId.toString() !==
-                    conversationId.toString()
-                ) {
-                    return res.status(409).json({
-                        message: "Client message ID already used"
-                    });
-                }
-
-                return res.status(200).json({
-                    message: "Message already sent",
-                    data: existingMessage,
-                    duplicate: true
-                });
-            }
-        }
-
-        // Find receiver
-        const receiverId = conversation.participants.find(
-            id => id.toString() !== senderId.toString()
-        );
-
-        if (!receiverId) {
-            return res.status(400).json({
-                message: "Invalid conversation participants"
-            });
-        }
-
-        // Verify mutual follow before creating a new message
-        const [senderFollowsReceiver, receiverFollowsSender] =
-            await Promise.all([
-                followModel.exists({
-                    follower: senderId,
-                    following: receiverId
-                }),
-                followModel.exists({
-                    follower: receiverId,
-                    following: senderId
-                })
-            ]);
-
-        if (!senderFollowsReceiver || !receiverFollowsSender) {
-            return res.status(403).json({
-                message: "Mutual follow is required to send messages"
-            });
-        }
-
-        // Create message
-        const message = await messageModel.create({
-            conversationId,
-            sender: senderId,
-            receiver: receiverId,
-            clientMessageId: clientMessageId?.trim(),
-            type: "text",
-            text: text.trim()
-        });
-
-        // Update conversation's latest message
-        conversation.lastMessage = message._id;
-        conversation.lastMessageAt = message.createdAt;
-
-        await conversation.save();
-
-        // Populate message details
-        const populatedMessage = await messageModel.findById(message._id)
-            .populate("sender", "username displayName image")
-            .populate("receiver", "username displayName image")
-            .lean();
-
-        // Send real-time event to receiver
         const io = req.app.get("io");
 
-        if (io) {
-            io.to(`user:${receiverId}`).emit("message:new", {
-                message: populatedMessage,
-                conversationId: conversation._id
-            });
-        }
+        const result = await createMessageIdempotently({
+            senderId,
+            conversationId,
+            text,
+            clientMessageId,
+            io
+        });
 
-        return res.status(201).json({
-            message: "Message sent successfully",
-            data: populatedMessage,
-            duplicate: false
+        return res.status(result.duplicate ? 200 : 201).json({
+            message: result.duplicate
+                ? "Message already sent"
+                : "Message sent successfully",
+            data: result.message,
+            duplicate: result.duplicate
         });
 
     } catch (error) {
-        // Handle simultaneous retries:
-        // Another request may have saved the same clientMessageId first.
-        if (error.code === 11000 && req.body.clientMessageId) {
-            try {
-                const existingMessage = await messageModel.findOne({
-                    sender: req.user._id,
-                    clientMessageId: req.body.clientMessageId.trim(),
-                    conversationId: req.params.conversationId
-                })
-                    .populate("sender", "username displayName image")
-                    .populate("receiver", "username displayName image")
-                    .lean();
-
-                if (existingMessage) {
-                    return res.status(200).json({
-                        message: "Message already sent",
-                        data: existingMessage,
-                        duplicate: true
-                    });
-                }
-            } catch (lookupError) {
-                console.error("Duplicate message lookup error:", lookupError);
-            }
+        if (error instanceof MessageServiceError) {
+            return res.status(error.status).json({
+                message: error.message
+            });
         }
 
         console.error("Send message error:", error);
@@ -303,9 +47,6 @@ export async function sendMessage(req, res) {
     }
 }
 
-
-
-// Get messages with cursor-based pagination
 export async function getMessages(req, res) {
     try {
         const userId = req.user._id;

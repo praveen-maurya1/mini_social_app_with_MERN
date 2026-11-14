@@ -18,11 +18,7 @@ export function SocketProvider({ children }) {
             auth: { token },
             transports: ["websocket"],
         });
-        // const socket = io("http://localhost:3000", {
-        //     auth: { token },
-        //     transports: ["websocket"],
-        // });
-
+        
         socketRef.current = socket;
 
         const handleNewMessage = async ({ message, conversationId }) => {

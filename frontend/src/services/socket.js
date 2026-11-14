@@ -11,11 +11,6 @@ export const connectSocket = (token) => {
         return socket;
     }
 
-    // socket = io("http://localhost:3000", {
-    //     auth: { token },
-    //     transports: ["websocket"],
-    //     reconnection: true,
-    // });
     socket = io(import.meta.env.VITE_SOCKET_URL, {
         auth: { token },
         transports: ["websocket"],
@@ -60,6 +55,47 @@ export const setSocket = (newSocket) => {
 };
 
 export const getSocket = () => socket;
+
+export const sendMessageViaSocket = (payload) => {
+    return new Promise((resolve, reject) => {
+        if (!socket || !socket.connected) {
+            const error = new Error("Socket is not connected");
+            error.code = "SOCKET_DISCONNECTED";
+            reject(error);
+            return;
+        }
+
+        socket.timeout(8000).emit(
+            "message:send",
+            payload,
+            (error, response) => {
+                if (error) {
+                    const timeoutError = new Error(
+                        "Socket message acknowledgement timed out"
+                    );
+                    timeoutError.code = "SOCKET_TIMEOUT";
+                    reject(timeoutError);
+                    return;
+                }
+
+                if (!response?.ok) {
+                    const serverError = new Error(
+                        response?.error || "Socket message failed"
+                    );
+
+                    serverError.status = response?.status || 500;
+                    reject(serverError);
+                    return;
+                }
+
+                resolve({
+                    message: response.message,
+                    duplicate: response.duplicate
+                });
+            }
+        );
+    });
+};
 
 export const disconnectSocket = () => {
     if (socket) {

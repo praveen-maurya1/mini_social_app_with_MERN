@@ -10,6 +10,8 @@ import conversationModel from "./src/models/conversation.model.js";
 import messageModel from "./src/models/message.model.js";
 
 
+import { createMessageIdempotently, MessageServiceError } from "./src/services/message.service.js";
+
 const PORT = process.env.PORT || 3000;
 
 const httpServer = http.createServer(app);
@@ -173,6 +175,48 @@ io.on("connection", async (socket) => {
         }
 
         console.log(`Socket connected: ${userId}`);
+
+        // Send message through Socket.IO
+        socket.on("message:send", async (payload = {}, acknowledge) => {
+            try {
+                const {
+                    conversationId,
+                    text,
+                    clientMessageId
+                } = payload;
+
+                const result = await createMessageIdempotently({
+                    senderId: userId,
+                    conversationId,
+                    text,
+                    clientMessageId,
+                    io
+                });
+
+                // Acknowledge successful persistence
+                if (typeof acknowledge === "function") {
+                    acknowledge({
+                        ok: true,
+                        message: result.message,
+                        duplicate: result.duplicate
+                    });
+                }
+
+            } catch (error) {
+                console.error("Socket message send error:", error);
+
+                if (typeof acknowledge === "function") {
+                    acknowledge({
+                        ok: false,
+                        error: error.message || "Failed to send message",
+                        status: error instanceof MessageServiceError
+                            ? error.status
+                            : 500
+                    });
+                }
+            }
+        });
+
         // Typing indicator: Start
         socket.on("typing:start", async ({ conversationId } = {}) => {
             try {
